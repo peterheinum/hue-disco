@@ -8,7 +8,6 @@ To run the project
 ```
 HUE_HUB=192.168.1.83
 API_KEY=oyjOKE1MhokwXXhauN-fgtdTgCRISPgPawaySIY6
-
 ```
 
 3. run the project with node app.js
