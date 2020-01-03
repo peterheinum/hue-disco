@@ -1,5 +1,5 @@
-require('dotenv').config()
-const fetch = require('node-fetch')
+require('dotenv').config({ path: __dirname + '../../.env' })
+const { get } = require('./utils')
 
 Array.prototype.last = function () {
   return this[this.length - 1]
@@ -10,8 +10,6 @@ const _resolve = object => Promise.resolve(object)
 const sleep = async time => new Promise(resolve => setTimeout(() => resolve(), time))
 
 const keys = object => Object.keys(object)
-
-const get = async ({ url, body, method }) => await fetch(url, { body: JSON.stringify(body), method }).then(res => res.json())
 
 const set_current_color = ({ id, hue, bri }) => state.lights.splice(state.lights.indexOf(state.lights.find(light => light.id == id)), 1, { id, hue, bri })
 
@@ -28,17 +26,18 @@ const state = {
 //Hue is the color, bri is the brightness.
 const set_colors = () => {
   //Red yellow orange chill
-  const chosen_colors = [
-    { hue: 1000, bri: 140 },
-    { hue: 3000, bri: 100 },
-    { hue: 500, bri: 50  },
-    { hue: 2500, bri: 50 },
-    { hue: 5000, bri: 75  }
+  const chosen_colors = 
+  [
+    { hue: 1000, bri: 200 },
+    { hue: 3000, bri: 250 },
+    { hue: 5500, bri: 230  },
+    { hue: 2500, bri: 250 },
+    { hue: 5000, bri: 175  }
   ]
 
   const colors = chosen_colors.length
     ? chosen_colors
-    : state.lights.map(() => ({ hue: Math.floor((Math.random() * 65000) + 1), bri: Math.floor((Math.random() * 200) + 1) }))
+    : state.lights.map(() => ({ hue: Math.floor((Math.random() * 65000) + 1), bri: Math.floor((Math.random() * 250) + 1) }))
   state.lights.forEach(({ id }, i) => {
     set_light({ id, hue: colors[i].hue, bri: colors[i].bri })
     set_current_color({ id, hue: colors[i].hue, bri: colors[i].bri })
