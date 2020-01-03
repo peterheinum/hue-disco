@@ -1,24 +1,47 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
-const fs = require('fs')
 const express = require('express')()
 const bodyParser = require('body-parser')
-const fetch = require('node-fetch')
 const _request = require('request')
-// const { get } = require('./utils')
 
-const get = async ({ url, body, method, headers }) => await fetch(url, { headers, method, body: JSON.stringify(body) })
 express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
 
 
-const state = {
+const auth = {
   access_token: '',
   refresh_token: ''
 }
 
+const track = {
+  //Meta data
+  id: '',
+  artist: {},
+  album: {},
+  meta: {},
+
+  //Vibe
+  danceability: 0,
+  energy: 0,
+  key: 0,
+  loudness: 0,
+  mode: 0,
+  speechiness: 0,
+  acousticness: 0,
+  instrumentalness: 0,
+  liveness: 0,
+  tempo: 0,
+
+  //Analytics
+  bars: [],
+  beats: [],
+  tatums: [],
+  sections: [],
+  segments: [],
+}
+
 const auth_headers = () => ({
-  'Authorization': 'Bearer ' + state.access_token,
+  'Authorization': 'Bearer ' + auth.access_token,
   'Accept': 'application/json',
   'Content-Type': 'application/json'
 })
@@ -28,8 +51,6 @@ const client_id = process.env.SPOTIFY_CLIENT_ID
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET
 const redirect_uri = encodeURIComponent('http://localhost:3000/callback')
 
-const readFile = async path => new Promise((res, rej) => fs.readFile(path, 'utf8', (err, data) => err ? rej(err) : res(data)))
-
 // currentlyPlaying: 'https://api.spotify.com/v1/me/player',
 // trackAnalysis: 'https://api.spotify.com/v1/audio-analysis/',
 // trackFeatures: 'https://api.spotify.com/v1/audio-features/',
@@ -37,14 +58,6 @@ const readFile = async path => new Promise((res, rej) => fs.readFile(path, 'utf8
 
 express.get('/', async (req, res) => {
   const scopes = 'user-read-playback-state'
-  // const query = querystring.stringify({
-  //   client_id,
-  //   response_type: 'code',
-  //   scope: 'user-read-playback-state',
-  //   redirect_uri,
-  // })
-
-  // const url = 'https://accounts.spotify.com/authorize?' + query
   const url = `https://accounts.spotify.com/authorize?client_id=${client_id}&response_type=code&scope=${scopes}&redirect_uri=${redirect_uri}`
   res.redirect(url)
 })
@@ -63,10 +76,8 @@ const request = async ({ options, method }) => {
   })
 }
 
-const get_song_vibe = async id => {
-  // trackAnalysis: 'https://api.spotify.com/v1/audio-analysis/'
-
-
+const get_song_vibe = async () => {
+  const { id } = track
   const url = `https://api.spotify.com/v1/audio-features/${id}`
   const headers = auth_headers()
 
@@ -85,19 +96,14 @@ const get_song_vibe = async id => {
     speechiness,
     acousticness,
     instrumentalness,
-    liveness } = JSON.parse(response)
-    console.log({    danceability,
-      energy,
-      key,
-      loudness,
-      mode,
-      speechiness,
-      acousticness,
-      instrumentalness,
-      liveness})
+    liveness,
+    tempo } = JSON.parse(response)
+
+  Object.assign(track, { danceability, energy, key, loudness, mode, speechiness, acousticness, instrumentalness, liveness, tempo })
 }
 
-const get_song_context = async id => {
+const get_song_context = async () => {
+  const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
   const headers = auth_headers()
 
@@ -107,7 +113,10 @@ const get_song_context = async id => {
   }
 
   const response = await request({ options, method: 'get' })
-  console.log(response)
+
+  const { meta, bars, beats, tatums, sections, segments } = JSON.parse(response)
+
+  Object.assign(track, { meta, bars, beats, tatums, sections, segments })
 }
 
 
@@ -125,8 +134,10 @@ const get_currently_playing = async () => {
   const response = await request({ options, method: 'get' })
   const { item } = JSON.parse(response)
   const { id, album, artists } = item
-  get_song_vibe(id)
-  get_song_context(id)
+  Object.assign(track, { id, album, artists })
+
+  get_song_vibe()
+  get_song_context()
 }
 
 
@@ -151,9 +162,9 @@ express.get('/callback', async (req, res) => {
   const response = await request({ options, method: 'post' })
   const { access_token, refresh_token } = response
 
-  Object.assign(state, { access_token, refresh_token })
+  Object.assign(auth, { access_token, refresh_token })
 
-  state.access_token && get_currently_playing()
+  auth.access_token && get_currently_playing()
 })
 
 
