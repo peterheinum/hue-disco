@@ -20,6 +20,11 @@ const track = {
   album: {},
   meta: {},
 
+  //Time & Sync
+  initial_progress_ms: 0,
+  progress_ms: 0,
+  duration_ms: 0,
+
   //Vibe
   danceability: 0,
   energy: 0,
@@ -40,12 +45,12 @@ const track = {
   segments: [],
 }
 
+
 const auth_headers = () => ({
   'Authorization': 'Bearer ' + auth.access_token,
   'Accept': 'application/json',
   'Content-Type': 'application/json'
 })
-
 
 const client_id = process.env.SPOTIFY_CLIENT_ID
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET
@@ -61,11 +66,6 @@ express.get('/', async (req, res) => {
   const url = `https://accounts.spotify.com/authorize?client_id=${client_id}&response_type=code&scope=${scopes}&redirect_uri=${redirect_uri}`
   res.redirect(url)
 })
-
-
-
-
-
 
 const request = async ({ options, method }) => {
   return new Promise((res, rej) => {
@@ -102,7 +102,37 @@ const get_song_vibe = async () => {
   Object.assign(track, { danceability, energy, key, loudness, mode, speechiness, acousticness, instrumentalness, liveness, tempo })
 }
 
-const get_song_context = async () => {
+const current = {
+  bars: {},
+  beats: {},
+  tatums: {},
+  sections: {},
+  segments: {},
+}
+
+const determineInterval = (type) => {
+  const analysis = track[type]
+  const progress = track.progress_ms
+  for (let i = 0; i < analysis.length; i++) {
+    if (i === (analysis.length - 1)) return i
+    if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
+  }
+}
+
+const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
+
+const set_active_intervals = () => {
+  
+  intervalTypes.forEach(type => {
+    const index = determineInterval(type)
+    if(JSON.stringify(track[type][index]) != JSON.stringify(current[type])) {
+      current[type] = track[type][index]
+      type == 'beats' && console.log(current['beats'])
+    }
+  })
+}
+
+const get_song_context = async (data) => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
   const headers = auth_headers()
@@ -117,8 +147,26 @@ const get_song_context = async () => {
   const { meta, bars, beats, tatums, sections, segments } = JSON.parse(response)
 
   Object.assign(track, { meta, bars, beats, tatums, sections, segments })
-}
 
+  intervalTypes.forEach((t) => {
+    const type = track[t]
+    type[0].duration = type[0].start + type[0].duration
+    type[0].start = 0
+    type[type.length - 1].duration = (track.duration_ms / 1000) - type[type.length - 1].start
+    type.forEach((interval) => {
+      if (interval.loudness_max_time) {
+        interval.loudness_max_time = interval.loudness_max_time * 1000
+      }
+      interval.start = interval.start * 1000
+      interval.duration = interval.duration * 1000
+    })
+  })
+
+  setInterval(() => {
+    track.progress_ms = Date.now() - track.initial_progress_ms
+    set_active_intervals()
+  }, 5)
+}
 
 
 const get_currently_playing = async () => {
@@ -130,12 +178,28 @@ const get_currently_playing = async () => {
     headers
   }
 
+  const t1 = Date.now()
 
   const response = await request({ options, method: 'get' })
-  const { item } = JSON.parse(response)
-  const { id, album, artists } = item
-  Object.assign(track, { id, album, artists })
 
+  const t2 = Date.now()
+  const time_diff = t2 - t1
+
+  const { item, progress_ms } = JSON.parse(response)
+  const { id, album, artists, duration_ms } = item
+  const initial_progress_ms = t1 - time_diff
+
+  Object.assign(track,
+    {
+      id,
+      album,
+      artists,
+      duration_ms,
+      initial_progress_ms,
+      progress_ms: progress_ms - time_diff
+    }
+  )
+  
   get_song_vibe()
   get_song_context()
 }
@@ -145,7 +209,6 @@ const get_currently_playing = async () => {
 
 express.get('/callback', async (req, res) => {
   const { code } = req.query
-
 
   const options = {
     url: 'https://accounts.spotify.com/api/token',
@@ -166,110 +229,3 @@ express.get('/callback', async (req, res) => {
 
   auth.access_token && get_currently_playing()
 })
-
-
-
-
-
-
-
-
-const cooldog = {
-  "device": {
-    "id": "ddfbd0c5c5b9ed67e147c28d73ba2ffa394b0d14",
-    "is_active": true,
-    "is_private_session": false,
-    "is_restricted": false,
-    "name": "DESKTOP-TMG11TA",
-    "type": "Computer",
-    "volume_percent": 50
-  },
-  "shuffle_state": true,
-  "repeat_state": "off",
-  "timestamp": 1578068109188,
-  "context": {
-    "external_urls": {
-      "spotify": "https://open.spotify.com/playlist/5ZRKKghVLZ0Gvt5xYx7r7d"
-    },
-    "href": "https://api.spotify.com/v1/playlists/5ZRKKghVLZ0Gvt5xYx7r7d",
-    "type": "playlist",
-    "uri": "spotify:user:1158078216:playlist:5ZRKKghVLZ0Gvt5xYx7r7d"
-  },
-  "progress_ms": 207416,
-  "item": {
-    "album": {
-      "album_type": "album",
-      "artists": [{
-        "external_urls": {
-          "spotify": "https://open.spotify.com/artist/5me0Irg2ANcsgc93uaYrpb"
-        },
-        "href": "https://api.spotify.com/v1/artists/5me0Irg2ANcsgc93uaYrpb",
-        "id": "5me0Irg2ANcsgc93uaYrpb",
-        "name": "The Notorious B.I.G.",
-        "type": "artist",
-        "uri": "spotify:artist:5me0Irg2ANcsgc93uaYrpb"
-      }],
-
-      "external_urls": {
-        "spotify": "https://open.spotify.com/album/2HTbQ0RHwukKVXAlTmCZP2"
-      },
-      "href": "https://api.spotify.com/v1/albums/2HTbQ0RHwukKVXAlTmCZP2",
-      "id": "2HTbQ0RHwukKVXAlTmCZP2",
-      "images": [{
-        "height": 640,
-        "url": "https://i.scdn.co/image/ab67616d0000b273a4950162a626593b7340f6c7",
-        "width": 640
-      }, {
-        "height": 300,
-        "url": "https://i.scdn.co/image/ab67616d00001e02a4950162a626593b7340f6c7",
-        "width": 300
-      }, {
-        "height": 64,
-        "url": "https://i.scdn.co/image/ab67616d00004851a4950162a626593b7340f6c7",
-        "width": 64
-      }],
-      "name": "Ready to Die (The Remaster)",
-      "release_date": "1994-09-13",
-      "release_date_precision": "day",
-      "total_tracks": 19,
-      "type": "album",
-      "uri": "spotify:album:2HTbQ0RHwukKVXAlTmCZP2"
-    },
-    "artists": [{
-      "external_urls": {
-        "spotify": "https://open.spotify.com/artist/5me0Irg2ANcsgc93uaYrpb"
-      },
-      "href": "https://api.spotify.com/v1/artists/5me0Irg2ANcsgc93uaYrpb",
-      "id": "5me0Irg2ANcsgc93uaYrpb",
-      "name": "The Notorious B.I.G.",
-      "type": "artist",
-      "uri": "spotify:artist:5me0Irg2ANcsgc93uaYrpb"
-    }],
-
-    "disc_number": 1,
-    "duration_ms": 304146,
-    "explicit": true,
-    "external_ids": {
-      "isrc": "USBB40580807"
-    },
-    "external_urls": {
-      "spotify": "https://open.spotify.com/track/1xIxMz1sNQ4b6svH1GuTtF"
-    },
-    "href": "https://api.spotify.com/v1/tracks/1xIxMz1sNQ4b6svH1GuTtF",
-    "id": "1xIxMz1sNQ4b6svH1GuTtF",
-    "is_local": false,
-    "name": "Gimme the Loot - 2005 Remaster",
-    "popularity": 65,
-    "preview_url": "https://p.scdn.co/mp3-preview/1fff52e2ba755ce44a53068cff15bd12e4e867e9 ? cid = fd067588863a4abb8233dea0581fec73",
-    "track_number": 3,
-    "type": "track",
-    "uri": "spotify:track:1xIxMz1sNQ4b6svH1GuTtF"
-  },
-  "currently_playing_type": "track",
-  "actions": {
-    "disallows": {
-      "resuming": true
-    }
-  },
-  "is_playing": true
-}
