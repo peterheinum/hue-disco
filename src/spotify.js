@@ -2,15 +2,18 @@ require('dotenv').config({ path: __dirname + '../../.env' })
 const express = require('express')()
 const bodyParser = require('body-parser')
 const _request = require('request')
+const compression = require('compression')
+express.use(compression())
+
+const { auth, active_interval, assign_active_interval } = require('./variables')
+const { is_equal } = require('./utils')
+
+express.use('/', require('./spotify_auth'))
+express.use('/home', require('./home'))
 
 express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
-
-const auth = {
-  access_token: '',
-  refresh_token: ''
-}
 
 const track = {
   //Meta data
@@ -18,7 +21,7 @@ const track = {
   artist: {},
   album: {},
   meta: {},
-
+  
   //Time & Sync
   tick: 0,
   tock: 0,
@@ -27,7 +30,7 @@ const track = {
   duration_ms: 0,
   is_playing: false,
   duration_ms: 0,
-
+  
   //Vibe
   danceability: 0,
   energy: 0,
@@ -39,7 +42,7 @@ const track = {
   instrumentalness: 0,
   liveness: 0,
   tempo: 0,
-
+  
   //Analytics
   bars: [],
   beats: [],
@@ -48,23 +51,16 @@ const track = {
   segments: [],
 }
 
+const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
+
 const auth_headers = () => ({
   'Authorization': 'Bearer ' + auth.access_token,
   'Accept': 'application/json',
   'Content-Type': 'application/json'
 })
 
-const client_id = process.env.SPOTIFY_CLIENT_ID
-const client_secret = process.env.SPOTIFY_CLIENT_SECRET
-const redirect_uri = encodeURIComponent('http://localhost:3000/callback')
-
-express.get('/', async (req, res) => {
-  const scopes = 'user-read-playback-state'
-  const url = `https://accounts.spotify.com/authorize?client_id=${client_id}&response_type=code&scope=${scopes}&redirect_uri=${redirect_uri}`
-  res.redirect(url)
-})
-
 const request = async ({ options, method }) => {
+  !options['headers'] && (options['headers'] = auth_headers())
   return new Promise((res, rej) => {
     _request[method](options, (err, response, body) => {
       err && rej(err)
@@ -76,63 +72,39 @@ const request = async ({ options, method }) => {
 const get_song_vibe = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-features/${id}`
-  const headers = auth_headers()
 
-  const options = {
-    url,
-    headers
-  }
+  const options = { url }
 
   const response = await request({ options, method: 'get' })
 
   Object.assign(track, JSON.parse(response))
 }
 
-const current = {
-  bars: {},
-  beats: {},
-  tatums: {},
-  sections: {},
-  segments: {},
-}
-
-const determineInterval = (type) => {
-  const analysis = track[type]
-  const progress = track.progress_ms
-  for (let i = 0; i < analysis.length; i++) {
-    if (i === (analysis.length - 1)) return i
-    if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
-  }
-}
-
-const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
-
 const set_active_intervals = () => {
+  const determineInterval = (type) => {
+    const analysis = track[type]
+    const progress = track.progress_ms
+    for (let i = 0; i < analysis.length; i++) {
+      if (i === (analysis.length - 1)) return i
+      if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
+    }
+  }
+  
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
-    if(JSON.stringify(track[type][index]) != JSON.stringify(current[type])) {
-      current[type] = track[type][index]
-      type == 'sections' && console.log(current[type])
-      type == 'beats' && console.log(current[type])
+    if(!is_equal(track[type][index], active_interval[type])) {
+      assign_active_interval(type, track[type][index])
+      type == 'sections' && console.log(active_interval[type])
+      type == 'beats' && console.log('BEAT ' + active_interval[type].start)
     }
   })
-}
-
-const is_song_over = () => {
-  const { progress_ms, duration_ms } = track
-  return progress_ms > duration_ms-1000
 }
 
 const get_song_context = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
-  const headers = auth_headers()
 
-  const options = {
-    url,
-    headers
-  }
-
+  const options = { url }
   const response = await request({ options, method: 'get' })
 
   const { meta, bars, beats, tatums, sections, segments } = JSON.parse(response)
@@ -154,7 +126,6 @@ const get_song_context = async () => {
     })
   })
   
-
   const tock = Date.now() - track.tick
   const initial_track_progress = track.progress_ms + tock
   const progress_ms = track.progress_ms + tock
@@ -162,10 +133,14 @@ const get_song_context = async () => {
 
   Object.assign(track, { initial_track_progress, progress_ms, initial_progress_ms })
 
-
   const restart = interval => {
     clearInterval(interval)
     get_currently_playing()
+  }
+
+  const is_song_over = () => {
+    const { progress_ms, duration_ms } = track
+    return progress_ms > duration_ms - 1000
   }
 
   let interval = setInterval(() => {
@@ -175,13 +150,9 @@ const get_song_context = async () => {
 }
 
 const get_currently_playing = async () => {
-  const headers = auth_headers()
   const url = 'https://api.spotify.com/v1/me/player'
 
-  const options = {
-    url,
-    headers
-  }
+  const options = { url }
 
   const tick = Date.now()
 
@@ -196,29 +167,9 @@ const get_currently_playing = async () => {
   get_song_context()
 }
 
-
-
-
-express.get('/callback', async (req, res) => {
-  const { code } = req.query
-
-  const options = {
-    url: 'https://accounts.spotify.com/api/token',
-    form: {
-      'code': code,
-      'grant_type': 'authorization_code',
-      'redirect_uri': 'http://localhost:3000/callback'
-    },
-    headers: {
-      Authorization: 'Basic ' + (Buffer.from(client_id + ':' + client_secret).toString('base64'))
-    },
-    json: true
+let start_interval = setInterval(() => {
+  if(auth.access_token && auth.refresh_token) {
+    get_currently_playing()
+    clearInterval(start_interval)
   }
-
-  const response = await request({ options, method: 'post' })
-  const { access_token, refresh_token } = response
-
-  Object.assign(auth, { access_token, refresh_token })
-
-  auth.access_token && get_currently_playing()
-})
+}, 3000)
