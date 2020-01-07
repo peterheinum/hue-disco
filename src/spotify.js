@@ -7,7 +7,6 @@ express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
 
-
 const auth = {
   access_token: '',
   refresh_token: ''
@@ -21,8 +20,12 @@ const track = {
   meta: {},
 
   //Time & Sync
-  initial_progress_ms: 0,
+  tick: 0,
+  tock: 0,
+  initial_track_progress: 0,
   progress_ms: 0,
+  duration_ms: 0,
+  is_playing: false,
   duration_ms: 0,
 
   //Vibe
@@ -45,7 +48,6 @@ const track = {
   segments: [],
 }
 
-
 const auth_headers = () => ({
   'Authorization': 'Bearer ' + auth.access_token,
   'Accept': 'application/json',
@@ -55,11 +57,6 @@ const auth_headers = () => ({
 const client_id = process.env.SPOTIFY_CLIENT_ID
 const client_secret = process.env.SPOTIFY_CLIENT_SECRET
 const redirect_uri = encodeURIComponent('http://localhost:3000/callback')
-
-// currentlyPlaying: 'https://api.spotify.com/v1/me/player',
-// trackAnalysis: 'https://api.spotify.com/v1/audio-analysis/',
-// trackFeatures: 'https://api.spotify.com/v1/audio-features/',
-
 
 express.get('/', async (req, res) => {
   const scopes = 'user-read-playback-state'
@@ -87,19 +84,8 @@ const get_song_vibe = async () => {
   }
 
   const response = await request({ options, method: 'get' })
-  const {
-    danceability,
-    energy,
-    key,
-    loudness,
-    mode,
-    speechiness,
-    acousticness,
-    instrumentalness,
-    liveness,
-    tempo } = JSON.parse(response)
 
-  Object.assign(track, { danceability, energy, key, loudness, mode, speechiness, acousticness, instrumentalness, liveness, tempo })
+  Object.assign(track, JSON.parse(response))
 }
 
 const current = {
@@ -122,17 +108,22 @@ const determineInterval = (type) => {
 const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
 
 const set_active_intervals = () => {
-  
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
     if(JSON.stringify(track[type][index]) != JSON.stringify(current[type])) {
       current[type] = track[type][index]
-      type == 'beats' && console.log(current['beats'])
+      type == 'sections' && console.log(current[type])
+      type == 'beats' && console.log(current[type])
     }
   })
 }
 
-const get_song_context = async (data) => {
+const is_song_over = () => {
+  const { progress_ms, duration_ms } = track
+  return progress_ms > duration_ms-1000
+}
+
+const get_song_context = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
   const headers = auth_headers()
@@ -153,21 +144,35 @@ const get_song_context = async (data) => {
     type[0].duration = type[0].start + type[0].duration
     type[0].start = 0
     type[type.length - 1].duration = (track.duration_ms / 1000) - type[type.length - 1].start
-    type.forEach((interval) => {
+    type.forEach(interval => {
       if (interval.loudness_max_time) {
         interval.loudness_max_time = interval.loudness_max_time * 1000
       }
+
       interval.start = interval.start * 1000
       interval.duration = interval.duration * 1000
     })
   })
+  
 
-  setInterval(() => {
-    track.progress_ms = Date.now() - track.initial_progress_ms
-    set_active_intervals()
+  const tock = Date.now() - track.tick
+  const initial_track_progress = track.progress_ms + tock
+  const progress_ms = track.progress_ms + tock
+  const initial_progress_ms = Date.now()
+
+  Object.assign(track, { initial_track_progress, progress_ms, initial_progress_ms })
+
+
+  const restart = interval => {
+    clearInterval(interval)
+    get_currently_playing()
+  }
+
+  let interval = setInterval(() => {
+    track.progress_ms = (Date.now() - initial_progress_ms) + initial_track_progress
+    is_song_over() ? restart(interval) : set_active_intervals()
   }, 5)
 }
-
 
 const get_currently_playing = async () => {
   const headers = auth_headers()
@@ -178,27 +183,14 @@ const get_currently_playing = async () => {
     headers
   }
 
-  const t1 = Date.now()
+  const tick = Date.now()
 
   const response = await request({ options, method: 'get' })
 
-  const t2 = Date.now()
-  const time_diff = t2 - t1
-
   const { item, progress_ms } = JSON.parse(response)
   const { id, album, artists, duration_ms } = item
-  const initial_progress_ms = t1 - time_diff
 
-  Object.assign(track,
-    {
-      id,
-      album,
-      artists,
-      duration_ms,
-      initial_progress_ms,
-      progress_ms: progress_ms - time_diff
-    }
-  )
+  Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms })
   
   get_song_vibe()
   get_song_context()
@@ -222,6 +214,7 @@ express.get('/callback', async (req, res) => {
     },
     json: true
   }
+
   const response = await request({ options, method: 'post' })
   const { access_token, refresh_token } = response
 
