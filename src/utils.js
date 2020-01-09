@@ -12,10 +12,13 @@ const request = async ({ options, method }) => {
   })
 }
 
+const sleep = async time => new Promise(resolve => setTimeout(() => resolve(), time))
+
 const is_equal = (a, b) => JSON.stringify(a) == JSON.stringify(b)
 
 module.exports = {
   get,
   request,
-  is_equal
+  sleep,
+  is_equal, 
 }

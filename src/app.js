@@ -1,13 +1,9 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
-const { get } = require('./utils')
+const { get, sleep } = require('./utils')
 
 Array.prototype.last = function () {
   return this[this.length - 1]
 }
-
-const _resolve = object => Promise.resolve(object)
-
-const sleep = async time => new Promise(resolve => setTimeout(() => resolve(), time))
 
 const keys = object => Object.keys(object)
 
@@ -23,17 +19,16 @@ const state = {
   distances: []
 }
 
-//Hue is the color, bri is the brightness.
-const set_colors = () => {
+const set_colors = (chosen_colors) => {
   //Red yellow orange chill
-  const chosen_colors = 
+  !chosen_colors.length && (chosen_color = 
   [
     { hue: 1000, bri: 200 },
     { hue: 3000, bri: 250 },
     { hue: 5500, bri: 230  },
     { hue: 2500, bri: 250 },
     { hue: 5000, bri: 175  }
-  ]
+  ])
 
   const colors = chosen_colors.length
     ? chosen_colors
@@ -43,14 +38,14 @@ const set_colors = () => {
     set_current_color({ id, hue: colors[i].hue, bri: colors[i].bri })
   })
 
-  return _resolve()
+  return Promise.resolve()
 }
 
 const get_all_lights = async () => {
   const url = `http://${hue_hub()}/api/${api_key()}/lights/`
   const method = 'GET'
   const result = await get({ url, method })
-  return _resolve(result)
+  return Promise.resolve(result)
 }
 
 const set_light = async ({ id, hue, bri }) => {
@@ -62,7 +57,7 @@ const set_light = async ({ id, hue, bri }) => {
   const method = 'PUT'
   const [status] = await get({ url, body, method })
   console.log(status)
-  return _resolve()
+  return Promise.resolve()
 }
 
 
@@ -97,14 +92,14 @@ const rotate_lights = async () => {
         await set_light({ id, hue: new_hue, bri: new_bri })
         set_current_color({ id, hue: new_hue, bri: new_bri })
       }
-      return _resolve()
+      return Promise.resolve()
     }
 
     await sleep(250)
     await set_all()
   }
 
-  return _resolve()
+  return Promise.resolve()
 }
 
 
@@ -120,17 +115,18 @@ const setup_lights = async () => {
     state.details.push(light)
   })
 
-  return _resolve()
+  return Promise.resolve()
 }
 
-const init = async () => {
+const spin_lights = async (spins = 1000, chosen_colors = []) => {
   await setup_lights()
-  await set_colors()
-  for (let i = 0; i < 1000; i++) {
+  await set_colors(chosen_colors)
+  for (let i = 0; i < spins; i++) {
     get_distances_in_colors()
     await rotate_lights()
     await sleep(2000)
   }
 }
 
-init()
+require.main == module && spin_lights()
+module.exports = { spin_lights }

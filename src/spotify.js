@@ -3,17 +3,22 @@ const express = require('express')()
 const bodyParser = require('body-parser')
 const _request = require('request')
 const compression = require('compression')
+
+//Express config
 express.use(compression())
-
-const { auth, active_interval, assign_active_interval } = require('./variables')
-const { is_equal } = require('./utils')
-
-express.use('/', require('./spotify_auth'))
-express.use('/home', require('./home'))
-
 express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
+express.use('/', require('./spotify_auth'))
+express.use('/home', require('./home'))
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
+
+const { event_hub } = require('./eventhub')
+const { is_equal } = require('./utils')
+
+const auth = {
+  access_token: '',
+  refresh_token: ''
+}
 
 const track = {
   //Meta data
@@ -59,6 +64,14 @@ const auth_headers = () => ({
   'Content-Type': 'application/json'
 })
 
+const active_interval = {
+  bars: {},
+  beats: {},
+  tatums: {},
+  sections: {},
+  segments: {},
+}
+
 const request = async ({ options, method }) => {
   !options['headers'] && (options['headers'] = auth_headers())
   return new Promise((res, rej) => {
@@ -93,7 +106,9 @@ const set_active_intervals = () => {
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
     if(!is_equal(track[type][index], active_interval[type])) {
-      assign_active_interval(type, track[type][index])
+      active_interval[type] = track[type][index]
+
+      event_hub.emit(type, track[type][index])
       type == 'sections' && console.log(active_interval[type])
       type == 'beats' && console.log('BEAT ' + active_interval[type].start)
     }
@@ -153,7 +168,6 @@ const get_currently_playing = async () => {
   const url = 'https://api.spotify.com/v1/me/player'
 
   const options = { url }
-
   const tick = Date.now()
 
   const response = await request({ options, method: 'get' })
@@ -167,9 +181,4 @@ const get_currently_playing = async () => {
   get_song_context()
 }
 
-let start_interval = setInterval(() => {
-  if(auth.access_token && auth.refresh_token) {
-    get_currently_playing()
-    clearInterval(start_interval)
-  }
-}, 3000)
+event_hub.on('auth_recieved', recieved_auth => Object.assign(auth, recieved_auth) && get_currently_playing())
