@@ -35,6 +35,7 @@ const track = {
   duration_ms: 0,
   is_playing: false,
   duration_ms: 0,
+  song_is_synced: false,
   
   //Vibe
   danceability: 0,
@@ -165,20 +166,25 @@ const get_song_context = async () => {
 }
 
 const get_currently_playing = async () => {
+  const { song_is_synced } = track
   const url = 'https://api.spotify.com/v1/me/player'
 
   const options = { url }
   const tick = Date.now()
-
   const response = await request({ options, method: 'get' })
+  const { item, progress_ms, is_playing } = JSON.parse(response)
 
-  const { item, progress_ms } = JSON.parse(response)
-  const { id, album, artists, duration_ms } = item
-
-  Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms })
+  if(is_playing && !song_is_synced) {
+    const { id, album, artists, duration_ms } = item
+    Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, song_is_synced: true })
+    get_song_vibe()
+    get_song_context() 
+  }
   
-  get_song_vibe()
-  get_song_context()
+  else {
+    Object.assign(track, { song_is_synced: false })  
+    setTimeout(() => get_currently_playing(), 3000)
+  }
 }
 
 event_hub.on('auth_recieved', recieved_auth => Object.assign(auth, recieved_auth) && get_currently_playing())
