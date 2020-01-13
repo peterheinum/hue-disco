@@ -73,6 +73,14 @@ const active_interval = {
   segments: {},
 }
 
+const last_index = {
+  bars: 0,
+  beats: 0,
+  tatums: 0,
+  sections: 0,
+  segments: 0
+}
+
 const request = async ({ options, method }) => {
   !options['headers'] && (options['headers'] = auth_headers())
   return new Promise((res, rej) => {
@@ -97,7 +105,7 @@ const get_song_vibe = async () => {
 const set_active_intervals = () => {
   const determineInterval = (type) => {
     const analysis = track[type]
-    const progress = track.progress_ms
+    const progress = track.progress_ms + 550
     for (let i = 0; i < analysis.length; i++) {
       if (i === (analysis.length - 1)) return i
       if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
@@ -106,12 +114,11 @@ const set_active_intervals = () => {
   
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
-    if(!is_equal(track[type][index], active_interval[type])) {
+    if(!is_equal(track[type][index], active_interval[type]) && last_index[type] < index) {
       active_interval[type] = track[type][index]
-
-      event_hub.emit(type, track[type][index])
-      type == 'sections' && console.log(active_interval[type])
-      type == 'beats' && console.log('BEAT ' + active_interval[type].start)
+      last_index[type] = index
+      event_hub.emit(type, active_interval)
+      type == 'beats' && console.log(index)
     }
   })
 }
@@ -141,7 +148,7 @@ const get_song_context = async () => {
       interval.duration = interval.duration * 1000
     })
   })
-  
+
   const tock = Date.now() - track.tick
   const initial_track_progress = track.progress_ms + tock
   const progress_ms = track.progress_ms + tock
