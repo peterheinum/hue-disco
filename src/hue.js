@@ -15,7 +15,6 @@ const set_light = async ({ id, hue, bri }) => {
   const body = { on: true, sat: 254, hue, bri }
   const method = 'PUT'
   const [status] = await get({ url, body, method })
-  console.log(status)
   return Promise.resolve()
 }
 
@@ -30,13 +29,16 @@ event_hub.on('segments', ({segments}) => {
 let on = false
 let number = 0
 
-event_hub.on('beats', ({beats, sections}) => { 
-  if(number % 2 == 0) {
-    for (let id = 0; id < 5; id++) {
-      set_light({id, hue: Math.floor((Math.random() * 65000) + 1), bri: 190 })    
+event_hub.on('beats', ({ beats, sections }) => { 
+  if(number == 0) {
+
+    const { loudness } = sections
+    for (let id = 0; id < 7; id++) {
+      set_light({id, hue: Math.floor(((sections.key/14) * 65000) + 1), bri: 190 })    
     }
   }
   number++
+  if(number == 4) number = 0
 })
 
 event_hub.on('bars', ({bars}) => { 

@@ -20,6 +20,8 @@ const auth = {
   refresh_token: ''
 }
 
+let _interval
+
 const track = {
   //Meta data
   id: '',
@@ -36,6 +38,7 @@ const track = {
   is_playing: false,
   duration_ms: 0,
   song_is_synced: false,
+  last_sync_id: '',
   
   //Vibe
   danceability: 0,
@@ -105,7 +108,7 @@ const get_song_vibe = async () => {
 const set_active_intervals = () => {
   const determineInterval = (type) => {
     const analysis = track[type]
-    const progress = track.progress_ms + 550
+    const progress = track.progress_ms
     for (let i = 0; i < analysis.length; i++) {
       if (i === (analysis.length - 1)) return i
       if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
@@ -123,6 +126,7 @@ const set_active_intervals = () => {
   })
 }
 
+
 const get_song_context = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
@@ -133,7 +137,7 @@ const get_song_context = async () => {
   const { meta, bars, beats, tatums, sections, segments } = JSON.parse(response)
 
   Object.assign(track, { meta, bars, beats, tatums, sections, segments })
-
+  
   intervalTypes.forEach((t) => {
     const type = track[t]
     type[0].duration = type[0].start + type[0].duration
@@ -151,47 +155,98 @@ const get_song_context = async () => {
 
   const tock = Date.now() - track.tick
   const initial_track_progress = track.progress_ms + tock
-  const progress_ms = track.progress_ms + tock
+  const progress_ms = track.progress_ms + tock - 300
   const initial_progress_ms = Date.now()
 
   Object.assign(track, { initial_track_progress, progress_ms, initial_progress_ms })
 
-  const restart = interval => {
-    clearInterval(interval)
-    get_currently_playing()
-  }
-
-  const is_song_over = () => {
-    const { progress_ms, duration_ms } = track
-    return progress_ms > duration_ms - 1000
-  }
-
-  let interval = setInterval(() => {
+  _interval = setInterval(() => {
     track.progress_ms = (Date.now() - initial_progress_ms) + initial_track_progress
-    is_song_over() ? restart(interval) : set_active_intervals()
-  }, 5)
+    set_active_intervals()
+  }, 10)
+}
+
+const reset_variables = () => {
+  Object.assign(active_interval, {
+    bars: {},
+    beats: {},
+    tatums: {},
+    sections: {},
+    segments: {},
+  })
+  
+  Object.assign(last_index, {
+    bars: 0,
+    beats: 0,
+    tatums: 0,
+    sections: 0,
+    segments: 0
+  })
+
+  Object.assign(track, {
+    //Meta data
+    id: '',
+    artist: {},
+    album: {},
+    meta: {},
+    
+    //Time & Sync
+    tick: 0,
+    tock: 0,
+    initial_track_progress: 0,
+    progress_ms: 0,
+    duration_ms: 0,
+    is_playing: false,
+    duration_ms: 0,
+    song_is_synced: false,
+    last_sync_id: '',
+    
+    //Vibe
+    danceability: 0,
+    energy: 0,
+    key: 0,
+    loudness: 0,
+    mode: 0,
+    speechiness: 0,
+    acousticness: 0,
+    instrumentalness: 0,
+    liveness: 0,
+    tempo: 0,
+    
+    //Analytics
+    bars: [],
+    beats: [],
+    tatums: [],
+    sections: [],
+    segments: [],
+  })
 }
 
 const get_currently_playing = async () => {
-  const { song_is_synced } = track
   const url = 'https://api.spotify.com/v1/me/player'
 
   const options = { url }
   const tick = Date.now()
   const response = await request({ options, method: 'get' })
+  console.log(response)
   const { item, progress_ms, is_playing } = JSON.parse(response)
-
-  if(is_playing && !song_is_synced) {
-    const { id, album, artists, duration_ms } = item
-    Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, song_is_synced: true })
+  const { id, album, artists, duration_ms } = item
+  
+  if(is_playing && id !== track.last_sync_id) {
+    reset_variables()
+    clearInterval(_interval)
+    Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
     get_song_vibe()
     get_song_context() 
   }
-  
-  else {
-    Object.assign(track, { song_is_synced: false })  
-    setTimeout(() => get_currently_playing(), 3000)
-  }
 }
 
-event_hub.on('auth_recieved', recieved_auth => Object.assign(auth, recieved_auth) && get_currently_playing())
+
+event_hub.on('auth_recieved', recieved_auth => {
+  Object.assign(auth, recieved_auth) 
+  get_currently_playing()
+  
+  setInterval(() => {
+    get_currently_playing()
+  }, 5000)
+})
