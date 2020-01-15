@@ -30,11 +30,14 @@ const set_light = async ({ id, hue, bri }) => {
   return Promise.resolve()
 }
 
+const clear_array = (array) => array.splice(0, array.length)
+
 
 module.exports = {
   get,
   request,
   sleep,
   is_equal, 
-  set_light
+  set_light,
+  clear_array
 }

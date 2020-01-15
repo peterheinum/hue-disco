@@ -32,6 +32,7 @@ router.get('/callback', async (req, res) => {
   const { access_token, refresh_token } = response
 
   event_hub.emit('auth_recieved', { access_token, refresh_token })
+  res.sendFile(__dirname + '/index.html')
 })
 
 module.exports = router
