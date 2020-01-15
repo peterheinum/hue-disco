@@ -28,7 +28,7 @@ const track = {
   artist: {},
   album: {},
   meta: {},
-  
+
   //Time & Sync
   tick: 0,
   tock: 0,
@@ -39,7 +39,7 @@ const track = {
   duration_ms: 0,
   song_is_synced: false,
   last_sync_id: '',
-  
+
   //Vibe
   danceability: 0,
   energy: 0,
@@ -51,7 +51,7 @@ const track = {
   instrumentalness: 0,
   liveness: 0,
   tempo: 0,
-  
+
   //Analytics
   bars: [],
   beats: [],
@@ -103,6 +103,7 @@ const get_song_vibe = async () => {
   const response = await request({ options, method: 'get' })
 
   Object.assign(track, JSON.parse(response))
+  event_hub.emit('vibe_recieved', JSON.parse(response))
 }
 
 const set_active_intervals = () => {
@@ -114,14 +115,13 @@ const set_active_intervals = () => {
       if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
     }
   }
-  
+
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
-    if(!is_equal(track[type][index], active_interval[type]) && last_index[type] < index) {
+    if (!is_equal(track[type][index], active_interval[type]) && last_index[type] < index) {
       active_interval[type] = track[type][index]
       last_index[type] = index
       event_hub.emit(type, active_interval)
-      type == 'beats' && console.log(index)
     }
   })
 }
@@ -137,7 +137,7 @@ const get_song_context = async () => {
   const { meta, bars, beats, tatums, sections, segments } = JSON.parse(response)
 
   Object.assign(track, { meta, bars, beats, tatums, sections, segments })
-  
+
   intervalTypes.forEach((t) => {
     const type = track[t]
     type[0].duration = type[0].start + type[0].duration
@@ -174,7 +174,7 @@ const reset_variables = () => {
     sections: {},
     segments: {},
   })
-  
+
   Object.assign(last_index, {
     bars: 0,
     beats: 0,
@@ -189,7 +189,7 @@ const reset_variables = () => {
     artist: {},
     album: {},
     meta: {},
-    
+
     //Time & Sync
     tick: 0,
     tock: 0,
@@ -200,7 +200,7 @@ const reset_variables = () => {
     duration_ms: 0,
     song_is_synced: false,
     last_sync_id: '',
-    
+
     //Vibe
     danceability: 0,
     energy: 0,
@@ -212,7 +212,7 @@ const reset_variables = () => {
     instrumentalness: 0,
     liveness: 0,
     tempo: 0,
-    
+
     //Analytics
     bars: [],
     beats: [],
@@ -222,30 +222,38 @@ const reset_variables = () => {
   })
 }
 
+const track_on_track = (progress_ms) => 
+  progress_ms + 200 > track.progress_ms && 
+  progress_ms - 200 < track.progress_ms
+
 const get_currently_playing = async () => {
   const url = 'https://api.spotify.com/v1/me/player'
 
   const options = { url }
   const tick = Date.now()
   const response = await request({ options, method: 'get' })
-  console.log(response)
+
+  if (response.error) {
+    event_hub.emit('renew_spotify_token')
+    return
+  }
+
   const { item, progress_ms, is_playing } = JSON.parse(response)
   const { id, album, artists, duration_ms } = item
-  
-  if(is_playing && id !== track.last_sync_id) {
+  if (is_playing && id !== track.last_sync_id && !track_on_track()) {
     reset_variables()
     clearInterval(_interval)
     Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
     get_song_vibe()
-    get_song_context() 
+    get_song_context()
   }
 }
 
 
 event_hub.on('auth_recieved', recieved_auth => {
-  Object.assign(auth, recieved_auth) 
+  Object.assign(auth, recieved_auth)
   get_currently_playing()
-  
+
   setInterval(() => {
     get_currently_playing()
   }, 5000)
