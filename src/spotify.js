@@ -13,6 +13,7 @@ express.use('/home', require('./home'))
 express.get('/sync', (req, res) => {
   console.log('hi there from the server')
   event_hub.emit('sync')
+  res.status(200).send()
 })
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
 
@@ -125,7 +126,7 @@ const set_active_intervals = () => {
     if (!is_equal(track[type][index], active_interval[type]) && last_index[type] < index) {
       active_interval[type] = track[type][index]
       last_index[type] = index
-      event_hub.emit(type, active_interval)
+      event_hub.emit(type, {...active_interval, index })
     }
   })
 }

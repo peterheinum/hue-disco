@@ -34,13 +34,13 @@ const avg_loudness_array = []
 const avg_loudness = () => avg_loudness_array.reduce((acc, cur) => acc = acc+cur, 0)/avg_loudness_array.length
 
 
-event_hub.on('beats', ({ beats, sections, segments, tatums, bars }) => { 
+event_hub.on('beats', ({ beats, sections, segments, tatums, bars, index }) => { 
   const { loudness_max } = segments
   avg_loudness_array.push(loudness_max)
   avg_loudness_array.length == 3 && avg_loudness_array.shift()
   
 
-  if(number == 0) {
+  if(index%2 == 1) {
     // console.log(segments, tatums, bars)
     // console.log(sections)
     let hue = on ? 65000 - last_hue : Math.round((avg_loudness()/-40)*65000)
@@ -48,6 +48,7 @@ event_hub.on('beats', ({ beats, sections, segments, tatums, bars }) => {
     console.log(avg_loudness())
     last_hue = hue
     console.log(hue)
+    console.log(index)
     on = !on
     // console.log(hue)
     // console.log(sections)
