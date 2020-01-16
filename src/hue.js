@@ -25,7 +25,7 @@ event_hub.on('segments', ({segments}) => {
 })
 
 let on = false
-let rythm = 2
+let rythm = 8
 let last_hue = 0
 
 const avg_loudness_array = []
@@ -60,5 +60,8 @@ event_hub.on('bars', ({bars}) => {
 })
 
 event_hub.on('sections', ({sections}) => { 
+  // if(sections.tempo > 150) rythm = 4
+  // if(sections.tempo < 150) rythm = 2
+
   clear_array(avg_loudness_array)
 })
