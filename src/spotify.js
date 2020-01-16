@@ -160,7 +160,7 @@ const get_song_context = async () => {
 
   const tock = Date.now() - track.tick
   const initial_track_progress = track.progress_ms + tock
-  const progress_ms = track.progress_ms + tock - 300
+  const progress_ms = track.progress_ms + tock - 500
   const initial_progress_ms = Date.now()
 
   Object.assign(track, { initial_track_progress, progress_ms, initial_progress_ms })
@@ -240,6 +240,7 @@ const get_currently_playing = async () => {
 
   if (response.error) {
     event_hub.emit('renew_spotify_token')
+    console.log('error:', response)
     return
   }
 

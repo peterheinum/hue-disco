@@ -19,12 +19,12 @@ const is_equal = (a, b) => JSON.stringify(a) == JSON.stringify(b)
 const hue_hub = () => process.env.HUE_HUB
 const api_key = () => process.env.API_KEY
 
-const set_light = async ({ id, hue, bri }) => {
+const set_light = async ({ id, hue, bri, sat = 254 }) => {
   hue = Math.floor(hue)
   bri = Math.floor(bri)
 
   const url = `http://${hue_hub()}/api/${api_key()}/lights/${id}/state`
-  const body = { on: true, sat: 254, hue, bri }
+  const body = { on: true, sat, hue, bri }
   const method = 'PUT'
   const [status] = await get({ url, body, method })
   return Promise.resolve()
