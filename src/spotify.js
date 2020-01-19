@@ -10,11 +10,8 @@ express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
 express.use('/', require('./spotify_auth'))
 express.use('/home', require('./home'))
-express.get('/sync', (req, res) => {
-  console.log('hi there from the server')
-  event_hub.emit('sync')
-  res.status(200).send()
-})
+express.use('/api', require('./operations'))
+
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
 
 const { event_hub } = require('./eventhub')
