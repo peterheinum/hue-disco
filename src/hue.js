@@ -43,7 +43,7 @@ event_hub.on('segments', ({segments}) => {
 })
 
 let on = false
-let rythm = 32
+let rythm = 4
 let last_hue = 0
 
 const avg_loudness_array = []
@@ -64,11 +64,11 @@ event_hub.on('beats', ({ beats, sections, segments, tatums, bars, index }) => {
     on = !on
 
     // console.log(sections)
-    set_light({id: 3, hue, bri: 190, sat: on ? 150 : 254 })    
-    set_light({id: 1, hue, bri: 190, sat: on ? 150 : 254 })    
-    // for (let id = 0; id < 7; id++) {
-    //   set_light({id, hue, bri: 190, sat: on ? 150 : 254 })    
-    // }
+    // set_light({id: 3, hue, bri: 190, sat: on ? 150 : 254 })    
+    // set_light({id: 1, hue, bri: 190, sat: on ? 150 : 254 })    
+    for (let id = 0; id < 7; id++) {
+      set_light({id, hue, bri: 190, sat: on ? 150 : 254, transitiontime: 5 })    
+    }
   }
 })
 
