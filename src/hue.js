@@ -14,25 +14,33 @@ event_hub.on('vibe_recieved', _vibe => {
 
 const tempos = [1, 2, 4, 8, 16, 32]
 
-event_hub.on('tempoIncrement', () => {
-  console.log(tempos.indexOf(rythm))
+event_hub.on('tempo_increase', () => {
   if(tempos[tempos.indexOf(rythm) - 1] > -1) {
     rythm = tempos[tempos.indexOf(rythm) - 1]
-    console.log(rythm)
   }
 })
 
-event_hub.on('tempoDecrement', () => {
-  console.log(tempos.indexOf(rythm))
-  console.log(tempos.indexOf(rythm) + 1)
+event_hub.on('tempo_decrease', () => {
   if(tempos.indexOf(rythm) + 1 < tempos.length) {
     rythm = tempos[tempos.indexOf(rythm) + 1]
   } 
 })
 
+event_hub.on('faster_transition', () => {
+  transitiontime - 1 > -1 && transitiontime--
+})
+
+event_hub.on('slower_transition', () => {
+  transitiontime < 10 && transitiontime++
+})
+
 event_hub.on('tempoDec', () => {
   
 })
+
+
+
+
 
 event_hub.on('tatums', ({tatums}) => { 
 
@@ -45,6 +53,8 @@ event_hub.on('segments', ({segments}) => {
 let on = false
 let rythm = 4
 let last_hue = 0
+let transitiontime = 1
+
 
 const avg_loudness_array = []
 
@@ -67,7 +77,7 @@ event_hub.on('beats', ({ beats, sections, segments, tatums, bars, index }) => {
     // set_light({id: 3, hue, bri: 190, sat: on ? 150 : 254 })    
     // set_light({id: 1, hue, bri: 190, sat: on ? 150 : 254 })    
     for (let id = 0; id < 7; id++) {
-      set_light({id, hue, bri: 190, sat: on ? 150 : 254, transitiontime: 5 })    
+      set_light({id, hue, bri: 190, sat: on ? 150 : 254, transitiontime })    
     }
   }
 })

@@ -8,22 +8,25 @@
   </head>
   <body>
     MMMM FRESH AIER Manual
-    <button onclick="tempoIncrement()">Faster tempo</button>
-    <button onclick="tempoDecrement()">Slower tempo</button>
+    <button onclick="tempo_increase()">Faster tempo</button>
+    <button onclick="tempo_decrease()">Slower tempo</button>
+    <br>
+    <button onclick="faster_transition()">Faster transition</button>
+    <button onclick="slower_transition()">Slower transition</button>
   </body>
 </html>
 
 <script>
-  const tempoIncrement = async () => {
-    const res = await fetch('api/tempoIncrement')
-    console.log(res)
-  }
+  const tempo_increase = () => fetch('api/tempo_increase')
 
+  const tempo_decrease = () => fetch('api/tempo_decrease')
   
-  const tempoDecrement = async () => {
-    const res = await fetch('api/tempoDecrement')
-    console.log(res)
-  }
+  const faster_transition = () => fetch('api/faster_transition')
+
+  const slower_transition = () => fetch('api/slower_transition')
+
+
+
 
 
 </script>

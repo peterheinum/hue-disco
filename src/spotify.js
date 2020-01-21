@@ -237,7 +237,7 @@ const get_currently_playing = async () => {
 
   if (response.error) {
     event_hub.emit('renew_spotify_token')
-    console.log('error:', response)
+    console.error('error:', response)
     return
   }
 
