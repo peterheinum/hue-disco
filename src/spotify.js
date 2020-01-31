@@ -108,10 +108,24 @@ const get_song_vibe = async () => {
   event_hub.emit('vibe_recieved', JSON.parse(response))
 }
 
+
+event_hub.on('add_sync_time', () => {
+  console.log('add_sync_time')
+  sync_time += 50
+})
+
+event_hub.on('remove_sync_time', () => {
+  console.log('remove_sync_time')
+  sync_time -= 50
+})
+
+let sync_time = 0
+
+
 const set_active_intervals = () => {
   const determineInterval = (type) => {
     const analysis = track[type]
-    const progress = track.progress_ms
+    const progress = track.progress_ms + sync_time
     for (let i = 0; i < analysis.length; i++) {
       if (i === (analysis.length - 1)) return i
       if (analysis[i].start < progress && progress < analysis[i + 1].start) return i

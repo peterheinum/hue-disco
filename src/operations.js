@@ -7,7 +7,6 @@ const { event_hub } = require('./eventhub')
 router.get('*', ({ url }, res) => {
   const [__, event] = url.split('/')
   event_hub.emit(event)
-  console.log(event)
   res.status(200).send()
 })
 
