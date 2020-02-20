@@ -2,8 +2,8 @@ require('dotenv').config({ path: __dirname + '../../.env' })
 const express = require('express')
 const router = express.Router()
 
-const { event_hub } = require('./eventhub')
-const { request } = require('./utils')
+const { event_hub } = require('../utils/eventhub')
+const { request } = require('../utils/helpers')
 
 router.get('/', async (req, res) => {
   const redirect_uri = encodeURIComponent('http://localhost:3000/callback')
@@ -32,7 +32,7 @@ router.get('/callback', async (req, res) => {
   const { access_token, refresh_token } = response
 
   event_hub.emit('auth_recieved', { access_token, refresh_token })
-  res.sendFile(__dirname + '/index.html')
+  res.redirect('/react')
 })
 
 module.exports = router

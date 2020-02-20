@@ -8,14 +8,17 @@ const compression = require('compression')
 express.use(compression())
 express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
-express.use('/', require('./spotify_auth'))
+express.use('/', require('../auth/spotify_auth'))
 express.use('/home', require('./home'))
-express.use('/api', require('./operations'))
+express.use('/api/create_event', require('./operations'))
+express.use('/react', require('../routes/react_renderer'))
+
+express.use(require('express').static('public'))
 
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
 
-const { event_hub } = require('./eventhub')
-const { is_equal } = require('./utils')
+const { event_hub } = require('../utils/eventhub')
+const { is_equal } = require('../utils/helpers')
 
 const auth = {
   access_token: '',
@@ -96,7 +99,7 @@ const request = async ({ options, method }) => {
   })
 }
 
-const get_song_vibe = async () => {
+const getSongVibe = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-features/${id}`
 
@@ -109,23 +112,22 @@ const get_song_vibe = async () => {
 }
 
 
-event_hub.on('add_sync_time', () => {
-  console.log('add_sync_time')
-  sync_time += 50
+
+let syncTime = 0
+event_hub.on('addSyncTime', () => {
+  syncTime += 50
 })
 
-event_hub.on('remove_sync_time', () => {
-  console.log('remove_sync_time')
-  sync_time -= 50
+event_hub.on('removeSyncTime', () => {
+  syncTime -= 50
 })
 
-let sync_time = 0
 
 
 const set_active_intervals = () => {
   const determineInterval = (type) => {
     const analysis = track[type]
-    const progress = track.progress_ms + sync_time
+    const progress = track.progress_ms + syncTime
     for (let i = 0; i < analysis.length; i++) {
       if (i === (analysis.length - 1)) return i
       if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
@@ -143,7 +145,7 @@ const set_active_intervals = () => {
 }
 
 
-const get_song_context = async () => {
+const getSongContext = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
 
@@ -242,7 +244,7 @@ const track_on_track = (progress_ms) =>
   progress_ms + 200 > track.progress_ms && 
   progress_ms - 200 < track.progress_ms
 
-const get_currently_playing = async () => {
+const getCurrentlyPlaying = async () => {
   const url = 'https://api.spotify.com/v1/me/player'
 
   const options = { url }
@@ -261,17 +263,17 @@ const get_currently_playing = async () => {
     reset_variables()
     clearInterval(_interval)
     Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
-    get_song_vibe()
-    get_song_context()
+    getSongVibe()
+    getSongContext()
   }
 }
 
 
 event_hub.on('auth_recieved', recieved_auth => {
   Object.assign(auth, recieved_auth)
-  get_currently_playing()
+  getCurrentlyPlaying()
 
   setInterval(() => {
-    get_currently_playing()
+    getCurrentlyPlaying()
   }, 5000)
 })

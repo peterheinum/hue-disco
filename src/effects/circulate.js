@@ -1,5 +1,5 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
-const { get, sleep } = require('./utils')
+const { get, sleep } = require('../utils/helpers')
 
 Array.prototype.last = function () {
   return this[this.length - 1]

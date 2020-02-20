@@ -7,33 +7,35 @@
     <title>Document</title>
   </head>
   <body>
-    MMMM FRESH AIER Manual
     <button onclick="tempo_increase()">Faster tempo</button>
     <button onclick="tempo_decrease()">Slower tempo</button>
+    
     <br>
     <button onclick="faster_transition()">Faster transition</button>
     <button onclick="slower_transition()">Slower transition</button>
+    
     <br>
-    <button onclick="add_sync_time()">add_sync_time</button>
-    <button onclick="remove_sync_time()">remove_sync_time</button>
+    <button onclick="add_sync_time()">add sync time</button>
+    <button onclick="remove_sync_time()">remove sync time</button>
+      
+    <br>
+    <button onclick="more_brightness()">more_brightness</button>
+    <button onclick="less_brightness()">less_brightness</button>
   </body>
 </html>
 
 <script>
-  const tempo_increase = () => fetch('api/tempo_increase')
-  const tempo_decrease = () => fetch('api/tempo_decrease')
+  const tempo_increase = () => fetch('api/create_event/tempo_increase')
+  const tempo_decrease = () => fetch('api/create_event/tempo_decrease')
   
-  const faster_transition = () => fetch('api/faster_transition')
-  const slower_transition = () => fetch('api/slower_transition')
+  const faster_transition = () => fetch('api/create_event/faster_transition')
+  const slower_transition = () => fetch('api/create_event/slower_transition')
 
-  const add_sync_time = () => fetch('api/add_sync_time')
-  const remove_sync_time = () => fetch('api/remove_sync_time')
+  const add_sync_time = () => fetch('api/create_event/add_sync_time')
+  const remove_sync_time = () => fetch('api/create_event/remove_sync_time')
 
-  var css = 'body { background: red; }',
-    head = document.head || document.getElementsByTagName('head')[0],
-    style = document.createElement('style');
-
-
+  const more_brightness = () => fetch('api/create_event/more_brightness')
+  const less_brightness = () => fetch('api/create_event/less_brightness')
 
 
 </script>
