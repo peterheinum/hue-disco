@@ -65,6 +65,7 @@ const avg_loudness = () => avg_loudness_array.reduce((acc, cur) => acc = acc+cur
 
 //Todo add the posility to change brightness and saturation live
 event_hub.on('beats', ({ beats, sections, segments, tatums, bars, index }) => { 
+  console.log('yeet yeet')
   const { loudness_max } = segments
   avg_loudness_array.push(loudness_max)
   avg_loudness_array.length == 3 && avg_loudness_array.shift()

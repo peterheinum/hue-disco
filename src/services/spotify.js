@@ -9,7 +9,6 @@ express.use(compression())
 express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
 express.use('/', require('../auth/spotify_auth'))
-express.use('/home', require('./home'))
 express.use('/api/create_event', require('./operations'))
 express.use('/react', require('../routes/react_renderer'))
 
