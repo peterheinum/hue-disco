@@ -19,6 +19,7 @@ express.listen(3000, () => console.log('Webhook server is listening, port 3000')
 const { event_hub } = require('../utils/eventhub')
 const { is_equal } = require('../utils/helpers')
 
+
 const auth = {
   access_token: '',
   refresh_token: ''
@@ -108,6 +109,7 @@ const getSongVibe = async () => {
 
   Object.assign(track, JSON.parse(response))
   event_hub.emit('vibe_recieved', JSON.parse(response))
+  event_hub.on('vibe_recieved', item => console.log(item))
 }
 
 
@@ -150,7 +152,6 @@ const getSongContext = async () => {
 
   const options = { url }
   const response = await request({ options, method: 'get' })
-
   const { meta, bars, beats, tatums, sections, segments } = JSON.parse(response)
 
   Object.assign(track, { meta, bars, beats, tatums, sections, segments })
@@ -249,7 +250,6 @@ const getCurrentlyPlaying = async () => {
   const options = { url }
   const tick = Date.now()
   const response = await request({ options, method: 'get' })
-
   if (response.error) {
     event_hub.emit('renew_spotify_token')
     console.error('error:', response)
@@ -259,11 +259,12 @@ const getCurrentlyPlaying = async () => {
   const { item, progress_ms, is_playing } = JSON.parse(response)
   const { id, album, artists, duration_ms } = item
   if (is_playing && id !== track.last_sync_id && !track_on_track()) {
-    reset_variables()
     clearInterval(_interval)
+    reset_variables()
     Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
     getSongVibe()
     getSongContext()
+    console.log('aaaa')
   }
 }
 

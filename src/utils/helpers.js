@@ -26,9 +26,9 @@ const set_light = async ({ id, hue, bri, sat = 254, transitiontime = 0 }) => {
   const url = `http://${hue_hub()}/api/${api_key()}/lights/${id}/state`
   const body = { on: true, sat, hue, bri, transitiontime }
   const method = 'PUT'
-  get({ url, body, method })
-  // const [status] = await get({ url, body, method })
-  // console.log(status)
+  // get({ url, body, method })
+  const [status] = await get({ url, body, method })
+  console.log(status)
   return Promise.resolve()
 }
 
