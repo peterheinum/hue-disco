@@ -1,5 +1,5 @@
 const fetch = require('node-fetch')
-const get = async ({ url, body, method, headers }) => await fetch(url, { headers, method, body: JSON.stringify(body) }).then(res => res.json())
+const get = async ({ url, body, method = 'GET', headers }) => await fetch(url, { headers, method, body: JSON.stringify(body) }).then(res => res.json())
 
 const _request = require('request')
 const request = async ({ options, method }) => {
@@ -28,11 +28,12 @@ const set_light = async ({ id, hue, bri, sat = 254, transitiontime = 0 }) => {
   const method = 'PUT'
   // get({ url, body, method })
   const [status] = await get({ url, body, method })
-  console.log(status)
   return Promise.resolve()
 }
 
 const clear_array = (array) => array.splice(0, array.length)
+
+const baseHueUrl = () => `http://${hue_hub()}/api/${api_key()}`
 
 
 module.exports = {
@@ -41,5 +42,6 @@ module.exports = {
   sleep,
   is_equal, 
   set_light,
-  clear_array
+  clear_array, 
+  baseHueUrl
 }

@@ -52,7 +52,6 @@ event_hub.on('tatums', ({tatums}) => {
 })
 
 event_hub.on('segments', ({segments}) => { 
-  console.log(segments)
 })
 
 let on = false
@@ -67,8 +66,6 @@ const avg_loudness = () => avg_loudness_array.reduce((acc, cur) => acc = acc+cur
 
 
 event_hub.on('beats', ({ beats, sections, segments, tatums, bars, index }) => { 
-  // console.log(segments)
-  // console.log(beats)
   const { loudness_max } = segments
   avg_loudness_array.push(loudness_max)
   avg_loudness_array.length == 3 && avg_loudness_array.shift()
