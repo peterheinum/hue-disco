@@ -1,7 +1,7 @@
 const EventEmitter = require('events')
 
-class Event_hub extends EventEmitter {}
+class Event_Hub extends EventEmitter {}
 
-const event_hub = new Event_hub()
+const eventHub = new Event_Hub()
 
-module.exports = { event_hub }
+module.exports = { eventHub }

@@ -17,9 +17,18 @@ express.use(require('express').static('public'))
 
 express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
 
-const { event_hub } = require('../utils/eventhub')
-const { is_equal } = require('../utils/helpers')
+const { eventHub } = require('../utils/eventhub')
+const { isEqual } = require('../utils/helpers')
 
+const request = async ({ options, method }) => {
+  !options['headers'] && (options['headers'] = auth_headers())
+  return new Promise((res, rej) => {
+    _request[method](options, (err, response, body) => {
+      err && rej(err)
+      body && res(body)
+    })
+  })
+}
 
 const auth = {
   access_token: '',
@@ -82,22 +91,12 @@ const active_interval = {
   segments: {},
 }
 
-const last_index = {
+const lastIndex = {
   bars: 0,
   beats: 0,
   tatums: 0,
   sections: 0,
   segments: 0
-}
-
-const request = async ({ options, method }) => {
-  !options['headers'] && (options['headers'] = auth_headers())
-  return new Promise((res, rej) => {
-    _request[method](options, (err, response, body) => {
-      err && rej(err)
-      body && res(body)
-    })
-  })
 }
 
 const getSongVibe = async () => {
@@ -109,18 +108,18 @@ const getSongVibe = async () => {
   const response = await request({ options, method: 'get' })
 
   Object.assign(track, JSON.parse(response))
-  event_hub.emit('vibe_recieved', JSON.parse(response))
-  event_hub.on('vibe_recieved', item => console.log(item))
+  eventHub.emit('vibe_recieved', JSON.parse(response))
+  eventHub.on('vibe_recieved', item => console.log(item))
 }
 
 
 
 let syncTime = 0
-event_hub.on('addSyncTime', () => {
+eventHub.on('addSyncTime', () => {
   syncTime += 50
 })
 
-event_hub.on('removeSyncTime', () => {
+eventHub.on('removeSyncTime', () => {
   syncTime -= 50
 })
 
@@ -138,10 +137,10 @@ const set_active_intervals = () => {
 
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
-    if (!is_equal(track[type][index], active_interval[type]) && last_index[type] < index) {
+    if (!isEqual(track[type][index], active_interval[type]) && lastIndex[type] < index) {
       active_interval[type] = track[type][index]
-      last_index[type] = index
-      event_hub.emit(type, {...active_interval, index })
+      lastIndex[type] = index
+      eventHub.emit(type, {...active_interval, index })
     }
   })
 }
@@ -194,7 +193,7 @@ const reset_variables = () => {
     segments: {},
   })
 
-  Object.assign(last_index, {
+  Object.assign(lastIndex, {
     bars: 0,
     beats: 0,
     tatums: 0,
@@ -252,7 +251,7 @@ const getCurrentlyPlaying = async () => {
   const tick = Date.now()
   const response = await request({ options, method: 'get' })
   if (response.error) {
-    event_hub.emit('renew_spotify_token')
+    eventHub.emit('renew_spotify_token')
     console.error('error:', response)
     return
   }
@@ -270,7 +269,7 @@ const getCurrentlyPlaying = async () => {
 }
 
 
-event_hub.on('auth_recieved', recieved_auth => {
+eventHub.on('auth_recieved', recieved_auth => {
   Object.assign(auth, recieved_auth)
   getCurrentlyPlaying()
 

@@ -2,7 +2,7 @@ require('dotenv').config({ path: __dirname + '../../../.env' })
 const express = require('express')
 const router = express.Router()
 
-const { event_hub } = require('../utils/eventhub')
+const { eventHub } = require('../utils/eventhub')
 const { request } = require('../utils/helpers')
 
 router.get('/', async (req, res) => {
@@ -31,7 +31,7 @@ router.get('/callback', async (req, res) => {
   const response = await request({ options, method: 'post' })
   const { access_token, refresh_token } = response
 
-  event_hub.emit('auth_recieved', { access_token, refresh_token })
+  eventHub.emit('auth_recieved', { access_token, refresh_token })
   res.redirect('/react')
 })
 

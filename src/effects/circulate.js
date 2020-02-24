@@ -34,7 +34,7 @@ const set_colors = (chosen_colors) => {
     ? chosen_colors
     : state.lights.map(() => ({ hue: Math.floor((Math.random() * 65000) + 1), bri: Math.floor((Math.random() * 250) + 1) }))
   state.lights.forEach(({ id }, i) => {
-    set_light({ id, hue: colors[i].hue, bri: colors[i].bri })
+    setLight({ id, hue: colors[i].hue, bri: colors[i].bri })
     set_current_color({ id, hue: colors[i].hue, bri: colors[i].bri })
   })
 
@@ -48,7 +48,7 @@ const get_all_lights = async () => {
   return Promise.resolve(result)
 }
 
-const set_light = async ({ id, hue, bri }) => {
+const setLight = async ({ id, hue, bri }) => {
   hue = Math.floor(hue)
   bri = Math.floor(bri)
 
@@ -89,7 +89,7 @@ const rotate_lights = async () => {
         const new_hue = hue - dist
         const new_bri = bri - bri_dist
 
-        await set_light({ id, hue: new_hue, bri: new_bri })
+        await setLight({ id, hue: new_hue, bri: new_bri })
         set_current_color({ id, hue: new_hue, bri: new_bri })
       }
       return Promise.resolve()
