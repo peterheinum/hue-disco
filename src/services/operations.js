@@ -36,7 +36,15 @@ router.post('/flashLight/', async (req, res) => {
     })
 })
 
+router.post('/createGroup', (req, res) => {
+  const { lightsForSetup } = req.body
+  
+  res.send(lightsForSetup)
+  // createGroup(lightsForSetup)
+})
 
-
+router.post('/editGroup', (req, res) => {
+  
+})
 
 module.exports = router

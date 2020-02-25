@@ -22,15 +22,8 @@ const xyBriToRgb = (x, y, bri) => {
   r = r * 255; if (r < 0) { r = 255 };
   g = g * 255; if (g < 0) { g = 255 };
   b = b * 255; if (b < 0) { b = 255 };
-  return { r, g, b }
+  return `rgb(${[r, g, b].toString()})`
 }
-
-const xyBriToRgbStr = (x, y, bri) => {
-  const { r, g, b } = xyBriToRgb(x, y, bri)
-  const color = `rgb(${[r, g, b].toString()})`
-  return color
-}
-
 
 //<Style>
 const full_size = {
@@ -58,29 +51,47 @@ const flex_column = {
   flexDirection: 'column'
 }
 
+const btnOriginalColor = 'rgb(75,181,67)'
+const shadedBtnColor = 'rgb(65,171,57)'
+
+const button = {
+  height: 50 + 'px',
+  width: 100 + 'px',
+  borderRadius: 6 + 'px'
+}
+
 //</Style>
 //Poor mans styling
 
-export default () => {
+export default ({ setSetupComplete }) => {
   const [lights, setLights] = useState([])
-  const [currentFlash, setCurrentFlash] = useState(null)
+  const [lightsForSetup, setLightsForSetup] = useState([])
+  const [btnColor, setBtnColor] = useState('rgb(75,181,67)')
 
-  const sortLightTypes = _lights => Object.keys(_lights).map(key =>
-    _lights[key].productname == 'Hue color lamp'
-      ? { bulb: true, ..._lights[key], id: key, currentColor: xyBriToRgbStr(_lights[key].state.xy[0], _lights[key].state.xy[1], _lights[key].state.bri) }
-      : { strip: true, ..._lights[key], id: key, currentColor: xyBriToRgbStr(_lights[key].state.xy[0], _lights[key].state.xy[1], _lights[key].state.bri) }
+  const sortLightTypes = lights => Object.keys(lights).map(key =>
+    lights[key].productname == 'Hue color lamp'
+      ? { bulb: true, ...lights[key], id: key, currentColor: xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri) }
+      : { strip: true, ...lights[key], id: key, currentColor: xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri) }
   )
 
-  const getLightSetup = () => {
-    axios.get('/api/getConfig')
-      .then(res => setLights(sortLightTypes(res.data)))
+  const getLightSetup = () => axios.get('/api/getConfig').then(res => setLights(sortLightTypes(res.data)))
+
+  const addAndFlashLight = light => {
+    setLightsForSetup([...lightsForSetup, light])
+    axios.post('/api/flashLight/', { light })
+  }
+  
+  const saveGroup = () => {
+    // await axios.post('/api/createGroup/', { lightsForSetup })
+    setTimeout(() => {
+      setSetupComplete()
+    }, 2000)
   }
 
-  const indicateLight = async light => {
-    setCurrentFlash(light.id)
-    await axios.post('/api/flashLight/', { light })
-    setTimeout(() => setCurrentFlash(null), 350)
-  } 
+  const indicateLight = light =>
+    lightsForSetup.find(_light => _light.id == light.id)
+      ? setLightsForSetup(lightsForSetup.filter(_light => _light.id != light.id))
+      : addAndFlashLight(light)
 
   useEffect(() => {
     !lights.length && getLightSetup()
@@ -97,7 +108,7 @@ export default () => {
                 style={{
                   ...circle,
                   ...flex_center,
-                  opacity: currentFlash == light.id ? 0.7 : 1,
+                  opacity: lightsForSetup.includes(light) ? 1 : 0.5,
                   backgroundColor: light.currentColor
                 }}>
                 {light.bulb ? (<WbIncandescent />) : (<LinearScale />)}
@@ -107,6 +118,12 @@ export default () => {
         )
         : (<div> <HourglassEmpty /> </div>)
       }
+      <div
+        onMouseLeave={() => setBtnColor(btnOriginalColor) }
+        onMouseEnter={() => setBtnColor(shadedBtnColor) } 
+        onClick={() => saveGroup()}
+        style={{ ...flex_center, ...button, backgroundColor: btnColor }}>  
+      </div>
     </div>
   )
 }

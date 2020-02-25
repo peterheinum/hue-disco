@@ -1,0 +1,19 @@
+require('dotenv').config({ path: __dirname + '../../.env' })
+const express = require('express')()
+const http = require('http').createServer(express)
+const bodyParser = require('body-parser')
+const compression = require('compression')
+
+console.log(process.env.API_KEY)
+
+//Express config
+express.use(compression())
+express.use(bodyParser.json())
+express.use(bodyParser.urlencoded({ extended: true }))
+express.use('/', require('./routes/reactRenderer'))
+express.use('/api/', require('./services/operations'))
+
+express.use(require('express').static('public'))
+
+http.listen(3000, () => console.log('Webhook server is listening, port 3000'))
+

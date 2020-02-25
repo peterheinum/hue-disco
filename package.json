@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/hue",
-    "dev": "nodemon --exec babel-node src/services/hue.js",
+    "dev": "nodemon --exec babel-node src/server.js",
     "webpack": "webpack -wd"
   },
   "keywords": [],
