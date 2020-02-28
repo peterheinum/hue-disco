@@ -11,6 +11,7 @@ router.get('/', async (req, res) => {
     <div id='reactTemplate'>{{{reactTemplate}}}</div>
     <script src='./app.js' charset='utf-8'></script>
     <script src='/vendor.js' charset='utf-8'></script>
+    <link rel="stylesheet" href="./style.css"/>
     `
 
   const handleBarsTemplate = hbs.compile(htmlTemplate);

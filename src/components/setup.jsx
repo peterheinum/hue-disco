@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { WbIncandescent, LinearScale, HourglassEmpty } from '@material-ui/icons'
+import { WbIncandescent, LinearScale, HourglassEmpty, Add } from '@material-ui/icons'
 
 import axios from 'axios'
 
@@ -30,6 +30,9 @@ const full_size = {
   height: 100 + '%',
   width: 100 + '%',
 }
+const full_width = {
+  width: 100 + '%'
+}
 
 const flex_center = {
   display: 'flex',
@@ -51,8 +54,12 @@ const flex_column = {
   flexDirection: 'column'
 }
 
-const btnOriginalColor = 'rgb(75,181,67)'
-const shadedBtnColor = 'rgb(65,171,57)'
+const white_text = {
+  color: 'whitesmoke'
+}
+
+const btnOriginalColor = 'rgb(65,171,57)'
+const shadedBtnColor = 'rgb(95,211,77)'
 
 const button = {
   height: 50 + 'px',
@@ -66,7 +73,19 @@ const button = {
 export default ({ setSetupComplete }) => {
   const [lights, setLights] = useState([])
   const [lightsForSetup, setLightsForSetup] = useState([])
-  const [btnColor, setBtnColor] = useState('rgb(75,181,67)')
+  const [existingGroups, setExistingGroups] = useState([])
+  const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [showLightList, setShowLightList] = useState(null)
+  const [btnColor, setBtnColor] = useState('rgb(65,171,57)')
+
+  useEffect(() => {
+    !lights.length && getLightSetup().then(({ data }) => setLights(sortLightTypes(data)))
+    !existingGroups.length && getExistingGroups().then(({ data }) => setExistingGroups(data))
+  }, [lights, existingGroups])
+
+  const getLightSetup = () => axios.get('/api/getConfig')
+  const getExistingGroups = () => axios.get('/api/getGroups')
 
   const sortLightTypes = lights => Object.keys(lights).map(key =>
     lights[key].productname == 'Hue color lamp'
@@ -74,55 +93,108 @@ export default ({ setSetupComplete }) => {
       : { strip: true, ...lights[key], id: key, currentColor: xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri) }
   )
 
-  const getLightSetup = () => axios.get('/api/getConfig').then(res => setLights(sortLightTypes(res.data)))
-
-  const addAndFlashLight = light => {
-    setLightsForSetup([...lightsForSetup, light])
-    axios.post('/api/flashLight/', { light })
-  }
-  
-  const saveGroup = () => {
-    // await axios.post('/api/createGroup/', { lightsForSetup })
-    setTimeout(() => {
-      setSetupComplete()
-    }, 2000)
-  }
-
   const indicateLight = light =>
     lightsForSetup.find(_light => _light.id == light.id)
       ? setLightsForSetup(lightsForSetup.filter(_light => _light.id != light.id))
       : addAndFlashLight(light)
 
-  useEffect(() => {
-    !lights.length && getLightSetup()
-  }, [lights])
+  const addAndFlashLight = light => {
+    setLightsForSetup([...lightsForSetup, light])
+    axios.post('/api/flashLight/', { light })
+  }
+
+  //Button functions
+  const edit = () => {
+    setEditing(false)
+    setCreating(true)
+  }
+
+  const create = () => {
+    setCreating(false)
+    setEditing(true)
+  }
+
+  const saveGroup = () => {
+    // await axios.post('/api/createGroup/', { lightsForSetup })
+    setTimeout(() => {
+      setSetupComplete(true)
+    }, 2000)
+  }
 
   return (
     <div style={{ ...full_size, ...flex_center, ...flex_column, ...space_around }}>
-      <h2> Create setup </h2>
-      {lights.length > 0
-        ? (
-          <div style={{ ...full_size, ...flex_center, ...space_around }}>
-            {(lights.map(light =>
-              <div onClick={() => indicateLight(light)} key={light.id}
-                style={{
-                  ...circle,
-                  ...flex_center,
-                  opacity: lightsForSetup.includes(light) ? 1 : 0.5,
-                  backgroundColor: light.currentColor
-                }}>
-                {light.bulb ? (<WbIncandescent />) : (<LinearScale />)}
+      {!lights.length && (<div> <HourglassEmpty /> </div>)}
+      <div style={{ ...full_width, ...flex_center, ...flex_column }}>
+        <h2> Create setup or edit existing </h2>
+        <div style={{ ...full_width, ...flex_center, ...space_around }}>
+          <div
+            onClick={edit}
+            style={{ ...flex_center, ...button, ...white_text, backgroundColor: creating ? 'rgb(195,151,177)' : 'rgb(175,121,157)' }}>
+            Create
+          </div>
+          <div
+            onClick={create}
+            style={{ ...flex_center, ...button, ...white_text, backgroundColor: editing ? 'rgb(95,211,77)' : 'rgb(65,171,57)' }}>
+            Edit
+        </div>
+        </div>
+      </div>
+      {creating || editing
+        ? lights.length > 0 && creating
+          ? (
+            <div style={{ ...full_size, ...flex_center, ...space_around }}>
+              {(lights.map(light =>
+                <div onClick={() => indicateLight(light)} key={light.id}
+                  style={{
+                    ...circle,
+                    ...flex_center,
+                    opacity: lightsForSetup.includes(light) ? 1 : 0.5,
+                    backgroundColor: light.currentColor
+                  }}>
+                  {light.id}
+                  {light.bulb ? (<WbIncandescent />) : (<LinearScale />)}
+                </div>
+              ))}
+            </div>
+          )
+          : (<div style={{ ...full_size, ...flex_column, ...flex_center, ...space_around }}>
+            {(existingGroups.map(group =>
+              <div>
+                <div>
+                  {group.name}
+                </div>
+                <div style={{ ...full_width, ...flex_center, ...space_around }}>
+                  {group.lights.map((id, index) => {
+                    const light = lights.find(x => x.id == id)
+                    return (<div onClick={() => indicateLight(light)} key={index+1000}
+                      style={{
+                        ...circle,
+                        ...flex_center,
+                        opacity: lightsForSetup.includes(light) ? 1 : 0.5,
+                        backgroundColor: light.currentColor
+                      }}>
+                      {light.id}
+                      {light.bulb ? (<WbIncandescent />) : (<LinearScale />)}
+                    </div>)
+                  })}
+                  <div onClick={() => setShowLightList(group.id)} style={{
+                    ...circle,
+                    ...flex_center,
+                    backgroundColor: lights[0].currentColor
+                  }}><Add /> </div>
+                </div>
               </div>
             ))}
-          </div>
-        )
-        : (<div> <HourglassEmpty /> </div>)
+          </div>)
+        : (<div style={{ ...full_size, ...flex_center, ...space_around }}> Edit or Create new? Up to you! </div>)
+
       }
       <div
-        onMouseLeave={() => setBtnColor(btnOriginalColor) }
-        onMouseEnter={() => setBtnColor(shadedBtnColor) } 
+        onMouseLeave={() => setBtnColor(btnOriginalColor)}
+        onMouseEnter={() => setBtnColor(shadedBtnColor)}
         onClick={() => saveGroup()}
-        style={{ ...flex_center, ...button, backgroundColor: btnColor }}>  
+        style={{ ...flex_center, ...button, ...white_text, backgroundColor: btnColor }}>
+        Save
       </div>
     </div>
   )

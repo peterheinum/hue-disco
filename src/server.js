@@ -4,8 +4,6 @@ const http = require('http').createServer(express)
 const bodyParser = require('body-parser')
 const compression = require('compression')
 
-console.log(process.env.API_KEY)
-
 //Express config
 express.use(compression())
 express.use(bodyParser.json())

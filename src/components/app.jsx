@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Setup from './setup'
+import styles from './app.css'
 
 export default () => {
   // Declare a new state variable, which we'll call "count"
@@ -8,12 +9,18 @@ export default () => {
   const baseUrl = '/api'
   const apiCall = () => fetch(`${baseUrl}/`)
 
-  
+  useEffect(() => {
+    if(count == 0) {
+      document.querySelector('*').style = 'padding:0px;margin:0px;'
+      document.querySelector('body').style = 'padding:0px;margin:0px;'
+      setCount(1)
+    }
+  }, [count])
   return ( 
-    <div>
+    <div className={styles.test}>
       {setupComplete 
-      ? ( <div> SEtup Com PLETE </div>)
-      : ( <Setup />) }
+      ? ( <LightController /> )
+      : ( <Setup setSetupComplete={setSetupComplete} />) }
     </div>
   )
 }

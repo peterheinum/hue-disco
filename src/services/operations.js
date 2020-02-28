@@ -1,9 +1,9 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
-const { get, baseHueUrl, setLight, shadeRGBColor } = require('../utils/helpers')
+const { get, baseHueUrl, setLight, shadeRGBColor, sleep } = require('../utils/helpers')
 const { calculateXY } = require('../utils/rgbToXY')
 const express = require('express')
 const router = express.Router()
-
+const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
 const { eventHub } = require('../utils/eventhub')
 
 router.get('/createEvent/*', ({ url }, res) => {
@@ -29,22 +29,28 @@ router.post('/flashLight/', async (req, res) => {
   const previousXy = calculateXY(...getRgbFromCssStr(currentColor))
   setLight({ id, xy })
     .then(() => res.send('ok'))
-    .then(() => {
-      setTimeout(() => {
-        setLight({ id, xy: previousXy })
-      }, 300)
+    .then(async () => {
+      await sleep(300)
+      setLight({ id, xy: previousXy })
     })
+})
+
+router.get('/getGroups', (req, res) => {
+  getGroups()
+    .then(resp => res.send(resp))
+    .catch(err => res.status(500).send(err))
 })
 
 router.post('/createGroup', (req, res) => {
   const { lightsForSetup } = req.body
-  
+
   res.send(lightsForSetup)
   // createGroup(lightsForSetup)
 })
 
 router.post('/editGroup', (req, res) => {
-  
+
 })
+
 
 module.exports = router
