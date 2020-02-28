@@ -20,19 +20,26 @@ router.get('/getConfig', async (req, res) => {
 
 const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
 
-
 router.post('/flashLight/', async (req, res) => {
   const { light } = req.body
   const { currentColor, id } = light
-  const [r, g, b] = getRgbFromCssStr(shadeRGBColor(currentColor, 20))
-  const xy = calculateXY(r, g, b)
-  const previousXy = calculateXY(...getRgbFromCssStr(currentColor))
-  setLight({ id, xy })
-    .then(() => res.send('ok'))
-    .then(async () => {
-      await sleep(300)
-      setLight({ id, xy: previousXy })
-    })
+  if(currentColor) {
+    const [r, g, b] = getRgbFromCssStr(shadeRGBColor(currentColor, 20))
+    const xy = calculateXY(r, g, b)
+    const previousXy = calculateXY(...getRgbFromCssStr(currentColor))
+    
+    await setLight({ id, xy })
+    res.send('ok')
+    await sleep(500)
+    await setLight({ id, xy: previousXy })
+  }
+
+  if(!currentColor) {
+    await setLight({ id, on: false })
+    await sleep(500)
+    await setLight({ id, on: true })
+    res.send('ok')
+  }
 })
 
 router.get('/getGroups', (req, res) => {
@@ -48,8 +55,11 @@ router.post('/createGroup', (req, res) => {
   // createGroup(lightsForSetup)
 })
 
-router.post('/editGroup', (req, res) => {
-
+router.post('/editGroup', async (req, res) => {
+  const { group } = req.body
+  const { id, lights } = group
+  const response = await editGroup(id, lights)
+  res.send(response)
 })
 
 

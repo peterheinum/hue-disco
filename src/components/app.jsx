@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import Setup from './setup'
-import styles from './app.css'
+import Setup from './Setup'
+import LightMixer from './lightMixer'
 
 export default () => {
-  // Declare a new state variable, which we'll call "count"
   const [count, setCount] = useState(0)
   const [setupComplete, setSetupComplete] = useState(false)
-  const baseUrl = '/api'
-  const apiCall = () => fetch(`${baseUrl}/`)
 
   useEffect(() => {
     if(count == 0) {
@@ -17,9 +14,10 @@ export default () => {
     }
   }, [count])
   return ( 
-    <div className={styles.test}>
+    <div>
       {setupComplete 
-      ? ( <LightController /> )
+      // ? ( <LightMixer /> )
+      ? ( <p> YEET </p> )
       : ( <Setup setSetupComplete={setSetupComplete} />) }
     </div>
   )

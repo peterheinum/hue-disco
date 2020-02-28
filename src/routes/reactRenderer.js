@@ -1,7 +1,7 @@
 import express from 'express'
 import React from 'react'
 import { renderToString } from 'react-dom/server'
-import App from '../components/app'
+import App from '../components/App'
 import hbs from 'handlebars';
 
 const router = express.Router()
@@ -11,7 +11,6 @@ router.get('/', async (req, res) => {
     <div id='reactTemplate'>{{{reactTemplate}}}</div>
     <script src='./app.js' charset='utf-8'></script>
     <script src='/vendor.js' charset='utf-8'></script>
-    <link rel="stylesheet" href="./style.css"/>
     `
 
   const handleBarsTemplate = hbs.compile(htmlTemplate);

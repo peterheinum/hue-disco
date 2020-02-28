@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { WbIncandescent, LinearScale, HourglassEmpty, Add } from '@material-ui/icons'
+import { WbIncandescent, LinearScale, HourglassEmpty, Edit } from '@material-ui/icons'
 
 import axios from 'axios'
 
@@ -19,9 +19,9 @@ const xyBriToRgb = (x, y, bri) => {
   r /= maxValue
   g /= maxValue
   b /= maxValue
-  r = r * 255; if (r < 0) { r = 255 };
-  g = g * 255; if (g < 0) { g = 255 };
-  b = b * 255; if (b < 0) { b = 255 };
+  r = r * 255; if (r < 0) r = 255
+  g = g * 255; if (g < 0) g = 255
+  b = b * 255; if (b < 0) b = 255
   return `rgb(${[r, g, b].toString()})`
 }
 
@@ -46,6 +46,12 @@ const circle = {
   width: 100 + 'px'
 }
 
+const button = {
+  height: 50 + 'px',
+  width: 100 + 'px',
+  borderRadius: 6 + 'px'
+}
+
 const space_around = {
   justifyContent: 'space-around'
 }
@@ -61,11 +67,12 @@ const white_text = {
 const btnOriginalColor = 'rgb(65,171,57)'
 const shadedBtnColor = 'rgb(95,211,77)'
 
-const button = {
-  height: 50 + 'px',
-  width: 100 + 'px',
-  borderRadius: 6 + 'px'
-}
+const createButtonStyle = { ...flex_center, ...button, ...white_text }
+const editButtonStyle = { ...flex_center, ...button, ...white_text }
+
+const bigColumnContainer = { ...full_size, ...flex_center, ...flex_column, ...space_around }
+const lightCircleContainer = { ...full_width, ...flex_center, ...space_around }
+
 
 //</Style>
 //Poor mans styling
@@ -76,7 +83,7 @@ export default ({ setSetupComplete }) => {
   const [existingGroups, setExistingGroups] = useState([])
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [showLightList, setShowLightList] = useState(null)
+  const [editingGroup, setEditingGroup] = useState(null)
   const [btnColor, setBtnColor] = useState('rgb(65,171,57)')
 
   useEffect(() => {
@@ -100,7 +107,29 @@ export default ({ setSetupComplete }) => {
 
   const addAndFlashLight = light => {
     setLightsForSetup([...lightsForSetup, light])
-    axios.post('/api/flashLight/', { light })
+    flashLight(light)
+  }
+
+  const flashLight = light => axios.post('/api/flashLight/', { light })
+
+  const addOrRemoveFromGroup = lightId => {
+    const removeLightFromGroup = (id, group) => {
+      const newGroup = { ...group, lights: group.lights.filter(light => light != id) }
+      existingGroups.splice(existingGroups.indexOf(group), 1)
+      setExistingGroups([newGroup, ...existingGroups])
+    }
+
+    const addLightToGroup = (id, group) => {
+      existingGroups.splice(existingGroups.indexOf(group), 1)
+      group.lights = [...group.lights, id]
+      setExistingGroups([group, ...existingGroups])
+      flashLight({ id })
+    }
+
+    const group = existingGroups.find(group => group.id == editingGroup)
+    group.lights.find(light => light == lightId)
+      ? removeLightFromGroup(lightId, group)
+      : addLightToGroup(lightId, group)
   }
 
   //Button functions
@@ -114,27 +143,37 @@ export default ({ setSetupComplete }) => {
     setEditing(true)
   }
 
-  const saveGroup = () => {
-    // await axios.post('/api/createGroup/', { lightsForSetup })
-    setTimeout(() => {
-      setSetupComplete(true)
-    }, 2000)
+  const handleClose = async () => {
+    if(creating) {
+      await axios.post('/api/createGroup/', { lightsForSetup })
+    } 
+    
+    if(editing) {
+      const group = existingGroups.find(({ id }) => id == editingGroup)
+      await axios.post('/api/editGroup/', { group })
+    }
+    
+    setSetupComplete(true)
   }
 
+  const saveAndGoBack = () => editing || creating 
+      ? handleClose()
+      : setSetupComplete(true)
+
   return (
-    <div style={{ ...full_size, ...flex_center, ...flex_column, ...space_around }}>
+    <div style={bigColumnContainer}>
       {!lights.length && (<div> <HourglassEmpty /> </div>)}
       <div style={{ ...full_width, ...flex_center, ...flex_column }}>
         <h2> Create setup or edit existing </h2>
-        <div style={{ ...full_width, ...flex_center, ...space_around }}>
+        <div style={lightCircleContainer}>
           <div
             onClick={edit}
-            style={{ ...flex_center, ...button, ...white_text, backgroundColor: creating ? 'rgb(195,151,177)' : 'rgb(175,121,157)' }}>
+            style={{ ...createButtonStyle, backgroundColor: creating ? 'rgb(195,151,177)' : 'rgb(175,121,157)' }}>
             Create
           </div>
           <div
             onClick={create}
-            style={{ ...flex_center, ...button, ...white_text, backgroundColor: editing ? 'rgb(95,211,77)' : 'rgb(65,171,57)' }}>
+            style={{ ...editButtonStyle, backgroundColor: editing ? 'rgb(95,211,77)' : 'rgb(65,171,57)' }}>
             Edit
         </div>
         </div>
@@ -163,10 +202,10 @@ export default ({ setSetupComplete }) => {
                 <div>
                   {group.name}
                 </div>
-                <div style={{ ...full_width, ...flex_center, ...space_around }}>
+                <div style={lightCircleContainer}>
                   {group.lights.map((id, index) => {
                     const light = lights.find(x => x.id == id)
-                    return (<div onClick={() => indicateLight(light)} key={index+1000}
+                    return (<div onClick={() => indicateLight(light)} key={index + 1000}
                       style={{
                         ...circle,
                         ...flex_center,
@@ -177,24 +216,40 @@ export default ({ setSetupComplete }) => {
                       {light.bulb ? (<WbIncandescent />) : (<LinearScale />)}
                     </div>)
                   })}
-                  <div onClick={() => setShowLightList(group.id)} style={{
+
+                  <div onClick={() => setEditingGroup(group.id)} style={{
                     ...circle,
                     ...flex_center,
-                    backgroundColor: lights[0].currentColor
-                  }}><Add /> </div>
+                    backgroundColor: lights[0].currentColor,
+                    opacity: editingGroup == group.id ? 1 : 0.5
+                  }}><Edit /> </div>
+                </div>
+                
+                <div style={lightCircleContainer}>
+                  {editingGroup == group.id && (lights.map((light, index) =>
+                    <div onClick={() => addOrRemoveFromGroup(light.id)} key={index+3000}
+                      style={{
+                        ...circle,
+                        ...flex_center,
+                        opacity: group.lights.includes(light.id) ? 1 : 0.5,
+                        backgroundColor: light.currentColor
+                      }}>
+                      {light.id}
+                      {light.bulb ? (<WbIncandescent />) : (<LinearScale />)}
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
           </div>)
         : (<div style={{ ...full_size, ...flex_center, ...space_around }}> Edit or Create new? Up to you! </div>)
-
       }
       <div
         onMouseLeave={() => setBtnColor(btnOriginalColor)}
         onMouseEnter={() => setBtnColor(shadedBtnColor)}
-        onClick={() => saveGroup()}
+        onClick={() => saveAndGoBack()}
         style={{ ...flex_center, ...button, ...white_text, backgroundColor: btnColor }}>
-        Save
+        Done
       </div>
     </div>
   )

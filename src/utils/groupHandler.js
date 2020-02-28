@@ -1,15 +1,12 @@
 const { get, baseHueUrl, objToArrayWithKeyAsId } = require('./helpers')
 
-const HUE_HUB = '192.168.1.8'
-const API_KEY = 'oyjHEB1MhokwXXhauN-fgtdTgKBTAKgPawaySIY6'
-const _baseHueUrl = () => `http://${HUE_HUB}/api/${API_KEY}`
+const hueClientKey = process.env.HUE_CLIENT_KEY
+const hueClientSecret = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
+const baseGroupUrl = `${baseHueUrl(hueClientKey)}/groups`
 
 const createGroup = async lights => {
-  const hueClientKey = process.env.HUE_CLIENT_KEY
-  const hueClientSecret = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
-  
   const method = 'POST'
-  const url = baseHueUrl(hueClientKey)
+  const url = baseGroupUrl
 
   const body = {
     "name": "R o o m b a",
@@ -27,28 +24,24 @@ const createGroup = async lights => {
 }
 
 const editGroup = async (id, lights) => {
-  const hueClientKey = process.env.HUE_CLIENT_KEY
-  
   const method = 'PUT'
-  const url = `${baseHueUrl(hueClientKey)}/${id}`
+  const url = `${baseGroupUrl}/${id}`
 
   const body = {
-    "lights": [lights.map(light => light.id)],
+    "lights": [...lights],
   }
 
   try {
     const res = await get({ url, body, method })
-    console.log(res)
+    return res
   } catch (error) {
     return error
   }
 }
 
 const getGroups = async () => {
-  const url = `${_baseHueUrl()}/groups`
-  const response = await get({ url })
-  console.log(objToArrayWithKeyAsId(response).filter(group => group.type == 'Entertainment'))
-  return objToArrayWithKeyAsId(response).filter(group => group.type == 'Entertainment')
+  const response = await get({ url: baseGroupUrl })
+  return Promise.resolve(objToArrayWithKeyAsId(response).filter(group => group.type == 'Entertainment'))
 }
 
 module.exports = { createGroup, getGroups, editGroup }
