@@ -1,4 +1,4 @@
-require('./spotify')
+require('./spotifySync')
 const { setLight, emptyArray } = require('../utils/helpers')
 const { eventHub } = require('../utils/eventhub')
 const { spin_light } = require('../effects/circulate')

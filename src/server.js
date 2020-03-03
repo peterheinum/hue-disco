@@ -8,7 +8,7 @@ const compression = require('compression')
 express.use(compression())
 express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
-express.use('/', require('./routes/reactRenderer'))
+express.use('/', require('./services/reactRenderer'))
 express.use('/api/', require('./services/operations'))
 
 express.use(require('express').static('public'))

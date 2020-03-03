@@ -1,7 +1,7 @@
 import express from 'express'
 import React from 'react'
 import { renderToString } from 'react-dom/server'
-import App from '../components/App'
+import App from '../frontend/App'
 import hbs from 'handlebars';
 
 const router = express.Router()
