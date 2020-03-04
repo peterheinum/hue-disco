@@ -51,8 +51,8 @@ router.get('/getGroups', (req, res) => {
 router.post('/createGroup', (req, res) => {
   const { lightsForSetup } = req.body
 
+  createGroup(lightsForSetup)
   res.send(lightsForSetup)
-  // createGroup(lightsForSetup)
 })
 
 router.post('/editGroup', async (req, res) => {
@@ -60,6 +60,10 @@ router.post('/editGroup', async (req, res) => {
   const { id, lights } = group
   const response = await editGroup(id, lights)
   res.send(response)
+})
+
+router.get('/initSpotifySync', (req, res) => {
+  res.redirect('/auth')
 })
 
 

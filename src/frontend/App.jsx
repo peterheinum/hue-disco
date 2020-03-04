@@ -29,19 +29,19 @@ const xyBriToRgb = (x, y, bri) => {
 }
 
 export default () => {
-  const [count, setCount] = useState(0)
+  const [init, setInit] = useState(false)
   const [menuChoice, setMenuChoice] = useState(null)
   const [lights, setLights] = useState([])
   const [existingGroups, setExistingGroups] = useState([])
 
   useEffect(() => {
-    if (count == 0) {
+    if (!init) {
       document.querySelector('*').style = 'padding:0px;margin:0px;'
       document.querySelector('body').style = 'padding:8px;margin:0px;background-color:#191414'
-      setCount(1)
+      Date.now() - localStorage.getItem('lastSpotifySync') < 3600000 && setMenuChoice('spotify')
+      setInit(true)
     }
-  }, [count])
-
+  }, [init])
 
   const sortLightTypes = lights => Object.keys(lights).map(key =>
     lights[key].productname == 'Hue color lamp'
@@ -58,7 +58,6 @@ export default () => {
   }, [lights, existingGroups])
 
   const setupProps = {
-    setSetupComplete,
     lights,
     existingGroups,
     setExistingGroups,
@@ -66,7 +65,7 @@ export default () => {
 
   return (
     <div>
-      {count > 0 && (
+      {init && (
         <div style={menu_button_position}>
         <div onClick={() => setMenuChoice('settings')} style={{ ...button, backgroundColor: 'rgb(150,40,50)' }}> Settings </div>  
         <div onClick={() => setMenuChoice('lightmixer')} style={{ ...button, backgroundColor: '#FF4500' }}> Light mixer </div>  

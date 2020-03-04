@@ -11,7 +11,7 @@ const createGroup = async lights => {
   const body = {
     "name": "R o o m b a",
     "type": "Entertainment",
-    "lights": [lights.map(light => light.id)],
+    "lights": [lights.map(light => light.id || light)],
     "class": "DiscoGroup"
   }
 

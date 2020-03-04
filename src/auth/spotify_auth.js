@@ -5,12 +5,19 @@ const router = express.Router()
 const { eventHub } = require('../utils/eventhub')
 const { request } = require('../utils/helpers')
 
-router.get('/', async (req, res) => {
-  const redirect_uri = encodeURIComponent('http://localhost:3000/callback')
+router.get('/', (req, res) => {
+  const redirect_uri = encodeURIComponent('http://localhost:3000/auth/callback')
   const scopes = 'user-read-playback-state'
   const url = `https://accounts.spotify.com/authorize?client_id=${process.env.SPOTIFY_CLIENT_ID}&response_type=code&scope=${scopes}&redirect_uri=${redirect_uri}`
   res.redirect(url)
 })
+
+// router.get('/', (req, res) => {
+//   const redirect_uri = encodeURIComponent('http://localhost:3000/auth/callback')
+//   const scopes = 'user-read-playback-state'
+//   const url = `https://accounts.spotify.com/authorize?client_id=${process.env.SPOTIFY_CLIENT_ID}&response_type=code&scope=${scopes}&redirect_uri=${redirect_uri}`
+//   res.send(url)
+// })
 
 router.get('/callback', async (req, res) => {
   const { code } = req.query
@@ -20,7 +27,7 @@ router.get('/callback', async (req, res) => {
     form: {
       'code': code,
       'grant_type': 'authorization_code',
-      'redirect_uri': 'http://localhost:3000/callback'
+      'redirect_uri': 'http://localhost:3000/auth/callback'
     },
     headers: {
       Authorization: 'Basic ' + (Buffer.from(process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET).toString('base64'))
@@ -32,7 +39,8 @@ router.get('/callback', async (req, res) => {
   const { access_token, refresh_token } = response
 
   eventHub.emit('auth_recieved', { access_token, refresh_token })
-  res.redirect('/react')
+  console.log('hello there', response)
+  res.redirect('/')
 })
 
 module.exports = router

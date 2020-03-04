@@ -269,8 +269,9 @@ const getCurrentlyPlaying = async () => {
 }
 
 
-eventHub.on('auth_recieved', recieved_auth => {
-  Object.assign(auth, recieved_auth)
+eventHub.on('auth_recieved', recievedAuth => {
+  console.log('AUTH RECIEVED BABTYYYY,', recievedAuth)
+  Object.assign(auth, recievedAuth) 
   getCurrentlyPlaying()
 
   setInterval(() => {

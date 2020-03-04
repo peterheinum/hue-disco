@@ -10,6 +10,7 @@ express.use(bodyParser.json())
 express.use(bodyParser.urlencoded({ extended: true }))
 express.use('/', require('./services/reactRenderer'))
 express.use('/api/', require('./services/operations'))
+express.use('/auth', require('./auth/spotify_auth'))
 
 express.use(require('express').static('public'))
 
