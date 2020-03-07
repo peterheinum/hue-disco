@@ -7,7 +7,7 @@ const isEqual = (a, b) => JSON.stringify(a) == JSON.stringify(b)
 const hue_hub = () => process.env.HUE_HUB
 const api_key = () => process.env.API_KEY
 const emptyArray = (array) => array.splice(0, array.length)
-const baseHueUrl = key => `http://${hue_hub()}/api/${key || api_key()}`
+const baseHueUrl = key => `http://${hue_hub() || '192.168.1.8'}/api/${key || api_key()}`
 const objToArrayWithKeyAsId = obj => Object.keys(obj).map(key => ({ ...obj[key], id: key }))
 
 const request = async ({ options, method }) => {

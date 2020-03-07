@@ -10,6 +10,19 @@ export const button = {
   margin: '4px'
 }
 
+export const wide_button = {
+  padding: 4 + 'px',
+  fontSize: 18 + 'px',
+  height: 42 + 'px',
+  width: 'max-content',
+  borderRadius: 6 + 'px',
+  cursor: 'pointer',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  margin: '4px'
+}
+
 export const full_size = {
   height: 100 + '%',
   width: 100 + '%',

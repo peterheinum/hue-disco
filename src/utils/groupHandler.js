@@ -1,8 +1,9 @@
 const { get, baseHueUrl, objToArrayWithKeyAsId } = require('./helpers')
 
 const hueClientKey = process.env.HUE_CLIENT_KEY
-const hueClientSecret = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
+
 const baseGroupUrl = `${baseHueUrl(hueClientKey)}/groups`
+
 
 const createGroup = async lights => {
   const method = 'POST'

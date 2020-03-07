@@ -23,6 +23,7 @@
     "express": "^4.17.1",
     "fourier-transform": "^1.1.2",
     "handlebars": "^4.7.3",
+    "node-dtls-client": "^0.6.0",
     "node-fetch": "^2.6.0",
     "react": "^16.12.0",
     "react-dom": "^16.12.0",

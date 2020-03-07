@@ -63,6 +63,11 @@ export default () => {
     setExistingGroups,
   }
 
+  const spotifyProps = {
+    lights,
+    existingGroups,
+  }
+
   return (
     <div>
       {init && (
@@ -75,7 +80,7 @@ export default () => {
       
       {menuChoice == 'settings' ? lights.length ? (<Setup {...setupProps} />) : <HourglassEmpty /> : '' }
       {menuChoice == 'lightmixer' && (<LightMixer />)} 
-      {menuChoice == 'spotify' && (<SpotifyUI />)} 
+      {menuChoice == 'spotify' && (<SpotifyUI { ...spotifyProps } />)} 
     </div>
   )
 }

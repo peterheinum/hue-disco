@@ -4,13 +4,8 @@ const { calculateXY } = require('../utils/rgbToXY')
 const express = require('express')
 const router = express.Router()
 const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
-const { eventHub } = require('../utils/eventhub')
-
-router.get('/createEvent/*', ({ url }, res) => {
-  const [__, ___, event] = url.split('/')
-  eventHub.emit(event)
-  res.status(200).send()
-})
+const { startStream, stopStream } = require('./emitter')
+const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
 
 router.get('/getConfig', async (req, res) => {
   const url = `${baseHueUrl()}/lights`
@@ -18,7 +13,34 @@ router.get('/getConfig', async (req, res) => {
   res.send(setup)
 })
 
-const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
+router.get('/getGroups', (req, res) => {
+  getGroups()
+    .then(resp => res.send(resp))
+    .catch(err => res.status(500).send(err))
+})
+
+router.post('/createGroup', (req, res) => {
+  const { lightsForSetup } = req.body
+  
+  //#TODO LATER
+  // createGroup(lightsForSetup)
+  res.send(lightsForSetup)
+})
+
+router.post('/sync/', async (req, res) => {
+  const { syncId, existingGroups } = req.body
+  const streamsToStop = existingGroups.filter(x => x.id != syncId).map(x => x.id)
+  streamsToStop.forEach(id => stopStream(id))
+  const groupToSync = existingGroups.find(x => x.id == syncId)
+  startStream(groupToSync)
+})
+
+router.post('/editGroup', async (req, res) => {
+  const { group } = req.body
+  const { id, lights } = group
+  const response = await editGroup(id, lights)
+  res.send(response)
+})
 
 router.post('/flashLight/', async (req, res) => {
   const { light } = req.body
@@ -40,30 +62,6 @@ router.post('/flashLight/', async (req, res) => {
     await setLight({ id, on: true })
     res.send('ok')
   }
-})
-
-router.get('/getGroups', (req, res) => {
-  getGroups()
-    .then(resp => res.send(resp))
-    .catch(err => res.status(500).send(err))
-})
-
-router.post('/createGroup', (req, res) => {
-  const { lightsForSetup } = req.body
-
-  createGroup(lightsForSetup)
-  res.send(lightsForSetup)
-})
-
-router.post('/editGroup', async (req, res) => {
-  const { group } = req.body
-  const { id, lights } = group
-  const response = await editGroup(id, lights)
-  res.send(response)
-})
-
-router.get('/initSpotifySync', (req, res) => {
-  res.redirect('/auth')
 })
 
 
