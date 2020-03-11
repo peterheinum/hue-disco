@@ -1,9 +1,9 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
 const dtls = require('node-dtls-client').dtls
 const axios = require('axios')
-const { baseHueUrl, rand, flat } = require('../utils/helpers')
+const { requireUncached, baseHueUrl, rand, flat } = require('../utils/helpers')
 const convertRgbToBytes = require('../utils/convertRgbToBytes')
-const store = require('../utils/store')
+const state = require('../utils/globalState')
 const hueUserName = process.env.HUE_CLIENT_KEY
 const hueClientKey = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
 const baseGroupUrl = `${baseHueUrl(hueUserName)}/groups`
@@ -21,8 +21,8 @@ const startStream = async payload => {
     clearInterval(interval)
     unsafeStartStream(payload)
   } catch (error) {
-    for (let i = 0; i < store.existingGroups.length; i++) {
-      const { id } = store.existingGroups[i]
+    for (let i = 0; i < state.existingGroups.length; i++) {
+      const { id } = state.existingGroups[i]
       await stopStream(id)      
     }
     startStream(payload)
@@ -46,25 +46,17 @@ const unsafeStartStream = ({ id, lights }) => {
       const socket = dtls.createSocket(options)
       socket
         .on('connected', e => {
-          store.currentSync = id
+          state.currentSync = id
           console.log('connected')
           interval = setInterval(() => {
-            const r1 = randomRgb()
-            const g1 = randomRgb()
-            const b1 = randomRgb()
-            const r2 = randomRgb()
-            const g2 = randomRgb()
-            const b2 = randomRgb()
-            const [x, y] = convertRgbToBytes(r1, g1, b1)
-            const [x2, y2] = convertRgbToBytes(r2, g2, b2)
-            const values = {
-              '0': [x, y],
-              '1': [x2, y2]
-            }
-
-            const test = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...values[index][0], ...values[index][1], 0x00, 0xff])
-            console.log(test)
-
+            // const { r, g, b } = requireUncached('../utils/globalState')
+            const { r, g, b } = global
+            
+            const values = lights.map(() => convertRgbToBytes(r, g, b)).reduce((acc, cur, index) => ({ ...acc, [index]: cur }),{})
+            
+            const lightAndColorArray = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...values[index][0], ...values[index][1], 0xff, 0xff])
+            console.log(r, g, b)
+            console.log(lights.map(() => convertRgbToBytes(r, g, b)))
             const message = Buffer.concat([
               Buffer.from("HueStream", "ascii"),
               Buffer.from([
@@ -78,11 +70,11 @@ const unsafeStartStream = ({ id, lights }) => {
 
                 0x00,
 
-                ...flat(test)
+                ...flat(lightAndColorArray)
               ])
             ])
             socket.send(message)
-          }, 500)
+          }, 300)
         })
         .on('error', e => {
           console.log('ERROR', e)

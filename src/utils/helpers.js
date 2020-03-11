@@ -34,6 +34,10 @@ const setLight = async ({ id, hue = null, bri, sat = 254, xy = null, transitiont
   return Promise.resolve()
 }
 
+const requireUncached = _module => {
+  delete require.cache[require.resolve(_module)]
+  return require(_module)
+}
 
 const shadeRGBColor = (color, percent) => {
   var f = color.split(','), t = percent < 0 ? 0 : 255, p = percent < 0 ? percent * -1 : percent, R = parseInt(f[0].slice(4)), G = parseInt(f[1]), B = parseInt(f[2])
@@ -51,5 +55,6 @@ module.exports = {
   emptyArray, 
   baseHueUrl,
   shadeRGBColor,
+  requireUncached,
   objToArrayWithKeyAsId,
 }

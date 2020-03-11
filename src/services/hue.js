@@ -1,10 +1,6 @@
 require('./spotifySync')
 const { setLight, emptyArray } = require('../utils/helpers')
-const { eventHub } = require('../utils/eventhub')
-const { spin_light } = require('../effects/circulate')
-const flashdown = require('../effects/flashdown')
-const fadeup = require('../effects/fadeup')
-const fft = require('../utils/interpolate') 
+const { eventHub } = require('../utils/eventHub')
 
 const vibe = {
   energy:0,
@@ -84,7 +80,7 @@ eventHub.on('beats', ({ beats, sections, segments, tatums, bars, index }) => {
 })
 
 eventHub.on('bars', ({bars}) => { 
-
+  console.log(bars)
 })
 
 eventHub.on('sections', ({sections}) => { 

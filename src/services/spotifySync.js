@@ -1,24 +1,18 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
-const express = require('express')()
-const bodyParser = require('body-parser')
 const _request = require('request')
-const compression = require('compression')
-
-//Express config
-express.use(compression())
-express.use(bodyParser.json())
-express.use(bodyParser.urlencoded({ extended: true }))
-express.use('/', require('../auth/spotify_auth'))
-express.use('/api/', require('./operations'))
-
-express.use('/react', require('../routes/reactRenderer'))
-
-express.use(require('express').static('public'))
-
-express.listen(3000, () => console.log('Webhook server is listening, port 3000'))
-
-const { eventHub } = require('../utils/eventhub')
+const { eventHub } = require('../utils/eventHub')
 const { isEqual } = require('../utils/helpers')
+
+const auth = {
+  access_token: '',
+  refresh_token: ''
+}
+
+const auth_headers = () => ({
+  'Authorization': 'Bearer ' + auth.access_token,
+  'Accept': 'application/json',
+  'Content-Type': 'application/json'
+})
 
 const request = async ({ options, method }) => {
   !options['headers'] && (options['headers'] = auth_headers())
@@ -30,12 +24,8 @@ const request = async ({ options, method }) => {
   })
 }
 
-const auth = {
-  access_token: '',
-  refresh_token: ''
-}
-
-let _interval
+let syncInterval
+let pingInterval
 
 const track = {
   //Meta data
@@ -77,12 +67,6 @@ const track = {
 
 const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
 
-const auth_headers = () => ({
-  'Authorization': 'Bearer ' + auth.access_token,
-  'Accept': 'application/json',
-  'Content-Type': 'application/json'
-})
-
 const active_interval = {
   bars: {},
   beats: {},
@@ -108,11 +92,9 @@ const getSongVibe = async () => {
   const response = await request({ options, method: 'get' })
 
   Object.assign(track, JSON.parse(response))
-  eventHub.emit('vibe_recieved', JSON.parse(response))
-  eventHub.on('vibe_recieved', item => console.log(item))
+  eventHub.emit('vibeRecieved', JSON.parse(response))
+  eventHub.on('vibeRecieved', item => console.log(item))
 }
-
-
 
 let syncTime = 0
 eventHub.on('addSyncTime', () => {
@@ -123,7 +105,7 @@ eventHub.on('removeSyncTime', () => {
   syncTime -= 50
 })
 
-
+const removeLastS = ([...str]) => str.reverse().slice(1, str.length).reverse().join('')
 
 const set_active_intervals = () => {
   const determineInterval = (type) => {
@@ -140,7 +122,7 @@ const set_active_intervals = () => {
     if (!isEqual(track[type][index], active_interval[type]) && lastIndex[type] < index) {
       active_interval[type] = track[type][index]
       lastIndex[type] = index
-      eventHub.emit(type, {...active_interval, index })
+      eventHub.emit(removeLastS(type), [active_interval[type], index])
     }
   })
 }
@@ -156,7 +138,7 @@ const getSongContext = async () => {
 
   Object.assign(track, { meta, bars, beats, tatums, sections, segments })
 
-  intervalTypes.forEach((t) => {
+  intervalTypes.forEach(t => {
     const type = track[t]
     type[0].duration = type[0].start + type[0].duration
     type[0].start = 0
@@ -173,18 +155,18 @@ const getSongContext = async () => {
 
   const tock = Date.now() - track.tick
   const initial_track_progress = track.progress_ms + tock
-  const progress_ms = track.progress_ms + tock - 500
+  const progress_ms = track.progress_ms + tock
   const initial_progress_ms = Date.now()
 
   Object.assign(track, { initial_track_progress, progress_ms, initial_progress_ms })
 
-  _interval = setInterval(() => {
+  syncInterval = setInterval(() => {
     track.progress_ms = (Date.now() - initial_progress_ms) + initial_track_progress
     set_active_intervals()
   }, 10)
 }
 
-const reset_variables = () => {
+const resetVariables = () => {
   Object.assign(active_interval, {
     bars: {},
     beats: {},
@@ -259,8 +241,8 @@ const getCurrentlyPlaying = async () => {
   const { item, progress_ms, is_playing } = JSON.parse(response)
   const { id, album, artists, duration_ms } = item
   if (is_playing && id !== track.last_sync_id && !track_on_track()) {
-    clearInterval(_interval)
-    reset_variables()
+    clearInterval(syncInterval)
+    resetVariables()
     Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
     getSongVibe()
     getSongContext()
@@ -269,12 +251,26 @@ const getCurrentlyPlaying = async () => {
 }
 
 
+eventHub.on('startPingInterval', () => {
+  
+  if(auth.access_token) {
+    console.log('yeah alright then lets do this')
+    pingInterval = setInterval(() => getCurrentlyPlaying(), 5000)
+  }
+  else {
+    console.log('no auth token bruv')
+  }
+})
+
+eventHub.on('clearPingInterval', () => { 
+  clearInterval(syncInterval)
+  clearInterval(pingInterval)
+})
+
 eventHub.on('auth_recieved', recievedAuth => {
   console.log('AUTH RECIEVED BABTYYYY,', recievedAuth)
   Object.assign(auth, recievedAuth) 
   getCurrentlyPlaying()
 
-  setInterval(() => {
-    getCurrentlyPlaying()
-  }, 5000)
+  eventHub.emit('startPingInterval')
 })

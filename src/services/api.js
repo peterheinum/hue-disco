@@ -1,11 +1,14 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
-const { get, baseHueUrl, setLight, shadeRGBColor, sleep } = require('../utils/helpers')
-const { calculateXY } = require('../utils/rgbToXY')
 const express = require('express')
 const router = express.Router()
-const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
+const state = require('../utils/globalState')
+
+const { eventHub } = require('../utils/eventHub')
+const { calculateXY } = require('../utils/rgbToXY')
 const { startStream, stopStream } = require('./emitter')
-const store = require('../utils/store')
+const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
+const { get, baseHueUrl, setLight, shadeRGBColor, sleep } = require('../utils/helpers')
+
 const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
 
 router.get('/getConfig', async (req, res) => {
@@ -30,18 +33,19 @@ router.post('/createGroup', (req, res) => {
 
 router.post('/sync/start', async (req, res) => {
   const { syncId, existingGroups } = req.body
-  store.existingGroups.push(...existingGroups)
+  state.existingGroups.push(...existingGroups)
   const streamsToStop = existingGroups.filter(x => x.id != syncId).map(x => x.id)
   streamsToStop.forEach(id => stopStream(id))
   const groupToSync = existingGroups.find(x => x.id == syncId)
   startStream(groupToSync)
+  eventHub.emit('startPingInterval')
   res.send()
 })
 
 router.get('/sync/current/:id', async (req, res) => {
   const { id } = req.params
   await sleep(1000)
-  store.currentSync == id 
+  state.currentSync == id 
     ? res.send(id)
     : res.status(500).send()
 })
