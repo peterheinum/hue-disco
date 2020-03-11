@@ -5,6 +5,7 @@ const express = require('express')
 const router = express.Router()
 const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
 const { startStream, stopStream } = require('./emitter')
+const store = require('../utils/store')
 const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
 
 router.get('/getConfig', async (req, res) => {
@@ -27,13 +28,25 @@ router.post('/createGroup', (req, res) => {
   res.send(lightsForSetup)
 })
 
-router.post('/sync/', async (req, res) => {
+router.post('/sync/start', async (req, res) => {
   const { syncId, existingGroups } = req.body
+  store.existingGroups.push(...existingGroups)
   const streamsToStop = existingGroups.filter(x => x.id != syncId).map(x => x.id)
   streamsToStop.forEach(id => stopStream(id))
   const groupToSync = existingGroups.find(x => x.id == syncId)
   startStream(groupToSync)
+  res.send()
 })
+
+router.get('/sync/current/:id', async (req, res) => {
+  const { id } = req.params
+  await sleep(1000)
+  store.currentSync == id 
+    ? res.send(id)
+    : res.status(500).send()
+})
+
+
 
 router.post('/editGroup', async (req, res) => {
   const { group } = req.body

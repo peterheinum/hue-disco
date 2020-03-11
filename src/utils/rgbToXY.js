@@ -64,17 +64,6 @@ module.exports = {
     xy[1] = precision(xy[1])
     return xy
   },
-  convertRgbToBytes(...args) {
-    const getBytes = val => {
-      const hexVal = Math.round(val * 0xffff)
-      const secondByte = hexVal % 0xff
-      const firstByte = (hexVal - secondByte) / 0xff
-      return [ firstByte, secondByte ]
-    }
-
-    const xy = this.calculateXY(...args)
-    return xy.map(cord => getBytes(cord))
-  }
 }
 
 function colorPointsForModel(model) {

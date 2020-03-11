@@ -3,6 +3,8 @@ const _request = require('request')
 
 const get = async ({ url, body, method = 'GET', headers }) => await fetch(url, { headers, method, body: JSON.stringify(body) }).then(res => res.json())
 const sleep = async time => new Promise(resolve => setTimeout(() => resolve(), time))
+const flat = arr => arr.reduce((acc, cur) => [...acc, ...cur],[])
+const rand = max => Math.floor(Math.random() * max)
 const isEqual = (a, b) => JSON.stringify(a) == JSON.stringify(b)
 const hue_hub = () => process.env.HUE_HUB
 const api_key = () => process.env.API_KEY
@@ -27,8 +29,8 @@ const setLight = async ({ id, hue = null, bri, sat = 254, xy = null, transitiont
   const url = `http://${hue_hub()}/api/${api_key()}/lights/${id}/state`
   const body = { on, sat, hue, xy, bri, transitiontime }
   const method = 'PUT'
-  // get({ url, body, method })
-  const [status] = await get({ url, body, method })
+  get({ url, body, method })
+  // const [status] = await get({ url, body, method })
   return Promise.resolve()
 }
 
@@ -40,6 +42,8 @@ const shadeRGBColor = (color, percent) => {
 
 module.exports = {
   get,
+  flat,
+  rand,
   sleep,
   request,
   isEqual, 

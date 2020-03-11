@@ -1,10 +1,11 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
 const dtls = require('node-dtls-client').dtls
 const axios = require('axios')
-const { baseHueUrl } = require('../utils/helpers')
-const { convertRgbToBytes } = require('../utils/rgbToXY')
-const hueUserName = process.env.HUE_CLIENT_KEY || 'pfmrEdAJUmKiO0d4mA4rJeWjLuKzssZtN6gsV2UZ'
-const hueClientKey = Buffer.from(process.env.HUE_CLIENT_SECRET || '28A0140D985A3B8B5AEE3D0CB3B18919', 'hex')
+const { baseHueUrl, rand, flat } = require('../utils/helpers')
+const convertRgbToBytes = require('../utils/convertRgbToBytes')
+const store = require('../utils/store')
+const hueUserName = process.env.HUE_CLIENT_KEY
+const hueClientKey = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
 const baseGroupUrl = `${baseHueUrl(hueUserName)}/groups`
 
 const stopStream = async id => {
@@ -12,16 +13,28 @@ const stopStream = async id => {
   return Promise.resolve()
 }
 
-const rand = max => Math.floor(Math.random() * max)
-// const randomRgb = `rgb(${rand(255)}, ${rand(255)}, ${rand(255)})`
 const randomRgb = () => rand(255)
+let interval
 
-const startStream = ({ id, lights }) => {
+const startStream = async payload => {
+  try {
+    clearInterval(interval)
+    unsafeStartStream(payload)
+  } catch (error) {
+    for (let i = 0; i < store.existingGroups.length; i++) {
+      const { id } = store.existingGroups[i]
+      await stopStream(id)      
+    }
+    startStream(payload)
+  }
+}
+
+const unsafeStartStream = ({ id, lights }) => {
   axios.put(`${baseGroupUrl}/${id}`, { stream: { active: true } })
     .then(() => {
       const options = {
         type: 'udp4',
-        address: process.env.HUE_HUB || '192.168.1.8',
+        address: process.env.HUE_HUB,
         port: 2100,
         psk: {
           [hueUserName]: hueClientKey
@@ -33,8 +46,9 @@ const startStream = ({ id, lights }) => {
       const socket = dtls.createSocket(options)
       socket
         .on('connected', e => {
+          store.currentSync = id
           console.log('connected')
-          setInterval(() => {
+          interval = setInterval(() => {
             const r1 = randomRgb()
             const g1 = randomRgb()
             const b1 = randomRgb()
@@ -48,7 +62,7 @@ const startStream = ({ id, lights }) => {
               '1': [x2, y2]
             }
 
-            const test = lights.map(({ id }, index) => [0x00, 0x00, 0x0 + id, ...values[index][0], ...values[index][1], 0x00, 0xff])
+            const test = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...values[index][0], ...values[index][1], 0x00, 0xff])
             console.log(test)
 
             const message = Buffer.concat([
@@ -64,18 +78,11 @@ const startStream = ({ id, lights }) => {
 
                 0x00,
 
-                0x00, 0x00, 0x03, //light id
-                // 0x99, 1, 0x00, 0x00, 0x00, 0x00,  //config for light 
-                ...x, ...y, 0x00, 0xff,
-
-                0x00, 0x00, 0x06,
-                // 0x00, 0x00, 0x00, 0x00, 0xff, 0xff
-                ...x2, ...y2, 0x00, 0xff
+                ...flat(test)
               ])
             ])
-            
-            // socket.send(message)
-          }, 30)
+            socket.send(message)
+          }, 500)
         })
         .on('error', e => {
           console.log('ERROR', e)
@@ -84,6 +91,7 @@ const startStream = ({ id, lights }) => {
           console.log('MESSAGE', msg)
         })
         .on('close', e => {
+          clearInterval(interval)
           console.log('CLOSE', e)
         })
     })
