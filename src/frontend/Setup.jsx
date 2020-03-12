@@ -20,7 +20,7 @@ import {
 import axios from 'axios'
 
 
-export default ({ lights, existingGroups, setExistingGroups }) => {
+export default ({ lights, setMenuChoice, existingGroups, setExistingGroups }) => {
   const [lightsForSetup, setLightsForSetup] = useState([])
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -72,6 +72,7 @@ export default ({ lights, existingGroups, setExistingGroups }) => {
   }
 
   const handleSave = async () => {
+    console.log(creating, editing)
     if (creating) {
       await axios.post('/api/createGroup/', { lightsForSetup })
       alert(`group has been created with [${lightsForSetup.map(x => x.id)}]`)
@@ -81,10 +82,9 @@ export default ({ lights, existingGroups, setExistingGroups }) => {
       await axios.post('/api/editGroup/', { group: existingGroups.find(({ id }) => id == editingGroup) })
       alert(`group ${editingGroup} has been saved`)
     }
-  }
-
-  const save = () => editing || creating && handleSave()
-     
+    
+    setMenuChoice(null)
+  }     
 
   return (
     <div style={bigColumnContainer}>
@@ -172,7 +172,7 @@ export default ({ lights, existingGroups, setExistingGroups }) => {
       <div
         onMouseLeave={() => setBtnColor(btnOriginalColor)}
         onMouseEnter={() => setBtnColor(shadedBtnColor)}
-        onClick={() => save()}
+        onClick={() => handleSave()}
         style={{ ...flex_center, ...button, ...white_text, backgroundColor: btnColor }}>
         Done
       </div>

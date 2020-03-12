@@ -154,7 +154,7 @@ const getSongContext = async () => {
   })
 
   const tock = Date.now() - track.tick
-  const initial_track_progress = track.progress_ms + tock
+  const initial_track_progress = track.progress_ms + tock 
   const progress_ms = track.progress_ms + tock
   const initial_progress_ms = Date.now()
 

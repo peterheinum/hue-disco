@@ -2,6 +2,7 @@ require('dotenv').config({ path: __dirname + '../../.env' })
 const dtls = require('node-dtls-client').dtls
 const axios = require('axios')
 const { requireUncached, baseHueUrl, rand, flat } = require('../utils/helpers')
+const { eventHub } = require('../utils/eventHub')
 const convertRgbToBytes = require('../utils/convertRgbToBytes')
 const state = require('../utils/globalState')
 const hueUserName = process.env.HUE_CLIENT_KEY
@@ -48,33 +49,31 @@ const unsafeStartStream = ({ id, lights }) => {
         .on('connected', e => {
           state.currentSync = id
           console.log('connected')
-          interval = setInterval(() => {
-            // const { r, g, b } = requireUncached('../utils/globalState')
-            const { r, g, b } = global
-            
-            const values = lights.map(() => convertRgbToBytes(r, g, b)).reduce((acc, cur, index) => ({ ...acc, [index]: cur }),{})
-            
-            const lightAndColorArray = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...values[index][0], ...values[index][1], 0xff, 0xff])
-            console.log(r, g, b)
-            console.log(lights.map(() => convertRgbToBytes(r, g, b)))
-            const message = Buffer.concat([
-              Buffer.from("HueStream", "ascii"),
-              Buffer.from([
-                0x01, 0x00,
-
-                0x07,
-
-                0x00, 0x00,
-
-                0x00,
-
-                0x00,
-
-                ...flat(lightAndColorArray)
+          eventHub.on('emitLight', () => {
+            // interval = setInterval(() => {
+              const { r, g, b } = global
+              
+              const values = lights.map(() => convertRgbToBytes(r + 5, g + 2, b - 10)).reduce((acc, cur, index) => ({ ...acc, [index]: cur }),{})
+              const lightAndColorArray = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...values[index][0], ...values[index][1], 0xff, 0xff])
+              const message = Buffer.concat([
+                Buffer.from("HueStream", "ascii"),
+                Buffer.from([
+                  0x01, 0x00,
+                  
+                  0x07,
+                  
+                  0x00, 0x00,
+                  
+                  0x00,
+                  
+                  0x00,
+                  
+                  ...flat(lightAndColorArray)
+                ])
               ])
-            ])
-            socket.send(message)
-          }, 300)
+              socket.send(message)
+            })
+              // }, 300)
         })
         .on('error', e => {
           console.log('ERROR', e)
@@ -83,6 +82,7 @@ const unsafeStartStream = ({ id, lights }) => {
           console.log('MESSAGE', msg)
         })
         .on('close', e => {
+          eventHub.on('emitLight', () => console.log('nah bruv socket is not connect'))
           clearInterval(interval)
           console.log('CLOSE', e)
         })

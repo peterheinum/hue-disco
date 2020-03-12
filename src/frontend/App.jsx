@@ -60,6 +60,7 @@ export default () => {
   const setupProps = {
     lights,
     existingGroups,
+    setMenuChoice,
     setExistingGroups,
   }
 
