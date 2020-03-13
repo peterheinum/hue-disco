@@ -53,11 +53,11 @@ export const white_text = {
 export const btnOriginalColor = 'rgb(65,171,57)'
 export const shadedBtnColor = 'rgb(95,211,77)'
 
-export const createButtonStyle = { ...flex_center, ...button, ...white_text }
-export const editButtonStyle = { ...flex_center, ...button, ...white_text }
+export const createButtonStyle = {...flex_center, ...button, ...white_text }
+export const editButtonStyle = {...flex_center, ...button, ...white_text }
 
-export const bigColumnContainer = { ...full_size, ...flex_center, ...flex_column, ...space_around }
-export const lightCircleContainer = { ...full_width, ...flex_center, ...space_around }
+export const bigColumnContainer = {...full_size, ...flex_center, ...flex_column, ...space_around }
+export const lightCircleContainer = {...full_width, ...flex_center, ...space_around }
 
 export const circle = {
   borderRadius: 50 + '%',

@@ -4,5 +4,6 @@ module.exports = {
   r: null,
   g: null,
   b: null,
-  socket: null
+  socket: null,
+  currentGroup: null
 }

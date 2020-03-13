@@ -7,11 +7,11 @@ const { eventHub } = require('../utils/eventHub')
 const { calculateXY } = require('../utils/rgbToXY')
 const { startStream, stopStream } = require('./emitter')
 const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
-const { get, baseHueUrl, setLight, shadeRGBColor, sleep } = require('../utils/helpers')
+const {get, baseHueUrl, setLight, shadeRGBColor, sleep } = require('../utils/helpers')
 
 const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
 
-router.get('/getConfig', async (req, res) => {
+router.get('/getConfig', async(req, res) => {
   const url = `${baseHueUrl()}/lights`
   const setup = await get({ url })
   res.send(setup)
@@ -25,55 +25,59 @@ router.get('/getGroups', (req, res) => {
 
 router.post('/createGroup', (req, res) => {
   const { lightsForSetup } = req.body
-  
+
   //#TODO LATER
   // createGroup(lightsForSetup)
   res.send(lightsForSetup)
 })
 
-router.post('/sync/start', async (req, res) => {
+router.post('/sync/start', async(req, res) => {
   const { syncId, existingGroups } = req.body
   state.existingGroups.push(...existingGroups)
   const streamsToStop = existingGroups.filter(x => x.id != syncId).map(x => x.id)
-  streamsToStop.forEach(id => stopStream(id))
+  for (let i = 0; i < streamsToStop.length; i++) {
+    await stopStream(streamsToStop[i])
+  }
+
   const groupToSync = existingGroups.find(x => x.id == syncId)
+  state.currentGroup = groupToSync
   startStream(groupToSync)
   eventHub.emit('startPingInterval')
   res.send()
 })
 
-router.get('/sync/current/:id', async (req, res) => {
+router.get('/sync/current/:id', async(req, res) => {
   const { id } = req.params
   await sleep(1000)
-  state.currentSync == id 
-    ? res.send(id)
-    : res.status(500).send()
+  state.currentSync == id ?
+    res.send(id) :
+    res.status(500).send()
 })
 
 
 
-router.post('/editGroup', async (req, res) => {
+router.post('/editGroup', async(req, res) => {
   const { group } = req.body
   const { id, lights } = group
   const response = await editGroup(id, lights)
   res.send(response)
 })
 
-router.post('/flashLight/', async (req, res) => {
+router.post('/flashLight/', async(req, res) => {
   const { light } = req.body
   const { currentColor, id } = light
-  if(currentColor) {
+  if (currentColor) {
     const [r, g, b] = getRgbFromCssStr(shadeRGBColor(currentColor, 20))
     const xy = calculateXY(r, g, b)
     const previousXy = calculateXY(...getRgbFromCssStr(currentColor))
-    
+
     await setLight({ id, xy })
     res.send('ok')
     await sleep(500)
     await setLight({ id, xy: previousXy })
   }
 
-  if(!currentColor) {
+  if (!currentColor) {
     await setLight({ id, on: false })
     await sleep(500)
     await setLight({ id, on: true })

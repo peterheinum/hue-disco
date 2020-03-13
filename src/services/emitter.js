@@ -24,7 +24,7 @@ const startStream = async payload => {
   } catch (error) {
     for (let i = 0; i < state.existingGroups.length; i++) {
       const { id } = state.existingGroups[i]
-      await stopStream(id)      
+      await stopStream(id)
     }
     startStream(payload)
   }
@@ -49,31 +49,26 @@ const unsafeStartStream = ({ id, lights }) => {
         .on('connected', e => {
           state.currentSync = id
           console.log('connected')
-          eventHub.on('emitLight', () => {
-            // interval = setInterval(() => {
-              const { r, g, b } = global
-              
-              const values = lights.map(() => convertRgbToBytes(r + 5, g + 2, b - 10)).reduce((acc, cur, index) => ({ ...acc, [index]: cur }),{})
-              const lightAndColorArray = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...values[index][0], ...values[index][1], 0xff, 0xff])
-              const message = Buffer.concat([
-                Buffer.from("HueStream", "ascii"),
-                Buffer.from([
-                  0x01, 0x00,
-                  
-                  0x07,
-                  
-                  0x00, 0x00,
-                  
-                  0x00,
-                  
-                  0x00,
-                  
-                  ...flat(lightAndColorArray)
-                ])
+          eventHub.on('emitLight', lightAndColorArray => {
+            console.log(lightAndColorArray)
+            const message = Buffer.concat([
+              Buffer.from("HueStream", "ascii"),
+              Buffer.from([
+                0x01, 0x00,
+
+                0x07,
+
+                0x00, 0x00,
+
+                0x00,
+
+                0x00,
+
+                ...flat(lightAndColorArray)
               ])
-              socket.send(message)
-            })
-              // }, 300)
+            ])
+            socket.send(message)
+          })
         })
         .on('error', e => {
           console.log('ERROR', e)

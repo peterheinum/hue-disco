@@ -1,5 +1,3 @@
-const { calculateXY } = require('./rgbToXY')
-
 const getBytes = val => {
   const hexVal = Math.round(val * 0xffff)
   const secondByte = hexVal % 0xff
@@ -13,13 +11,13 @@ const convertToXY = (red, green, blue) => {
   red =
     red > 0.04045 ? Math.pow((red + 0.055) / (1.0 + 0.055), 2.4) : red / 12.92
   green =
-    green > 0.04045
-      ? Math.pow((green + 0.055) / (1.0 + 0.055), 2.4)
-      : green / 12.92
+    green > 0.04045 ?
+    Math.pow((green + 0.055) / (1.0 + 0.055), 2.4) :
+    green / 12.92
   blue =
-    blue > 0.04045
-      ? Math.pow((blue + 0.055) / (1.0 + 0.055), 2.4)
-      : blue / 12.92
+    blue > 0.04045 ?
+    Math.pow((blue + 0.055) / (1.0 + 0.055), 2.4) :
+    blue / 12.92
 
   //RGB values to XYZ using the Wide RGB D65 conversion formula
   const X = red * 0.664511 + green * 0.154324 + blue * 0.162028
