@@ -14,7 +14,7 @@ const stopStream = async id => {
   return Promise.resolve()
 }
 
-const randomRgb = () => rand(255)
+
 let interval
 
 const startStream = async payload => {
@@ -50,7 +50,6 @@ const unsafeStartStream = ({ id, lights }) => {
           state.currentSync = id
           console.log('connected')
           eventHub.on('emitLight', lightAndColorArray => {
-            console.log(lightAndColorArray)
             const message = Buffer.concat([
               Buffer.from("HueStream", "ascii"),
               Buffer.from([

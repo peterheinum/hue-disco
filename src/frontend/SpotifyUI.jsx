@@ -47,6 +47,7 @@ export default ({ lights, existingGroups }) => {
       syncId: id,
       existingGroups,
     })
+
     checkIfStreamIsLive(id)
   }
 

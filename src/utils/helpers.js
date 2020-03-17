@@ -10,6 +10,7 @@ const hue_hub = () => process.env.HUE_HUB
 const api_key = () => process.env.API_KEY
 const emptyArray = (array) => array.splice(0, array.length)
 const baseHueUrl = key => `http://${hue_hub() || '192.168.1.8'}/api/${key || api_key()}`
+const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
 const objToArrayWithKeyAsId = obj => Object.keys(obj).map(key => ({ ...obj[key], id: key }))
 
 const request = async ({ options, method }) => {
@@ -56,5 +57,6 @@ module.exports = {
   baseHueUrl,
   shadeRGBColor,
   requireUncached,
+  getRgbFromCssStr,
   objToArrayWithKeyAsId,
 }
