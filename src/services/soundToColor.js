@@ -17,29 +17,34 @@ let functionSwitch = false
 
 let interpolation
 const startInterpolate = () => {
-  const randomRgb = () => `rgb(${rand(255)},${rand(255)},${rand(255)})`
-  interpolation = d3.interpolateCubehelix(randomRgb(), randomRgb())
+  const randomRgb = () => `rgb(${rand(255)},${rand(100)},${rand(255)})`
+  const a = 'rgb(255, 0, 0)'
+  const b = 'rgb(0, 0, 255)'
+  
+  interpolation = d3.interpolateRgb(a, b)
 }
+
+eventHub.on('testFunction', () => {
+  tweenAround()
+})
 
 const tweenAround = () => {
   clearInterval(interval)
-  distanceBetweenBeats = 0 - ((lastBeat - Date.now()) / 2)
-  lastBeat = Date.now()
   startInterpolate()
 
   let i = 0
   interval = setInterval(() => {
-    i += 0.1
+    if(i > 0.99) tweenAround()
+    i += 0.005
     const [r, g, b] = getRgbFromCssStr(interpolation(i))
+    console.log(convertRgbToBytes(r, g, b))
     emitRgb(r, g, b)
-    console.log(r, g, b)
-  }, 400)
+  }, 20)
 }
 
-const emitRgb = (r, g, b, brightness = 200) => {
+const emitRgb = (r, g, b) => {
   const { lights } = state.currentGroup
-  const values = lights.map(() => convertRgbToBytes(r, g, b)).reduce((acc, cur, index) => ({ ...acc, [index]: cur }), {})
-  const colorMessage = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...flat(values[index]), brightness, brightness])
+  const colorMessage = lights.map(id => [0x00, 0x00, parseInt(id), r, r, g, g, b, b])
 
   eventHub.emit('emitLight', colorMessage)
 }
@@ -78,9 +83,10 @@ const hardBlink = () => {
   const lightAndColorArray = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...flat(values[index]), brightness, brightness])
   const turnedofLights = lights.map(id => [0x00, 0x00, parseInt(id), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
 
-
-  eventHub.emit('emitLight', lightAndColorArray)
-  setTimeout(() => eventHub.emit('emitLight', turnedofLights), distanceBetweenBeats)
+  emitRgb(red, green, blue)
+  emitRgb(0, 0, 0)
+  // eventHub.emit('emitLight', lightAndColorArray)
+  // setTimeout(() => eventHub.emit('emitLight', ), distanceBetweenBeats)
 }
 
 const switchAndBlink = () => {
@@ -115,14 +121,12 @@ const getCurrentFunction = () => functionSwitch
 eventHub.on('beat', ([beat, index]) => {
   distanceBetweenBeats = 0 - ((lastBeat - Date.now()) / 2)
   lastBeat = Date.now()
-
-  // getCurrentFunction()()
+  getCurrentFunction()()
 })
 
 eventHub.on('section', () => {
   if(state.currentGroup) {
     functionSwitch = !functionSwitch
-    tweenAround()
   }
 })
 

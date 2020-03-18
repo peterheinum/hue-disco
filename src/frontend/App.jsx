@@ -76,6 +76,7 @@ export default () => {
         <div onClick={() => setMenuChoice('settings')} style={{ ...button, backgroundColor: 'rgb(150,40,50)' }}> Settings </div>  
         <div onClick={() => setMenuChoice('lightmixer')} style={{ ...button, backgroundColor: '#FF4500' }}> Light mixer </div>  
         <div onClick={() => setMenuChoice('spotify')} style={{ ...button, backgroundColor: '#1DB954' }}> Spotify Dj </div>  
+        <div onClick={() => fetch('/api/testFunction')} style={{ ...button, backgroundColor: '#1DB954' }}> Test functions </div>  
       </div>
       )}
       

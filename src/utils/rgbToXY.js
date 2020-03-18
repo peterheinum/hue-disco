@@ -62,6 +62,7 @@ module.exports = {
 
     xy[0] = precision(xy[0])
     xy[1] = precision(xy[1])
+    console.log({xy})
     return xy
   },
 }

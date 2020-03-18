@@ -40,9 +40,11 @@ const editGroup = async (id, lights) => {
   }
 }
 
-const getGroups = async () => {
-  const response = await get({ url: baseGroupUrl })
-  return Promise.resolve(objToArrayWithKeyAsId(response).filter(group => group.type == 'Entertainment'))
-}
+const onlyEnterTainment = arr => arr.filter(group => group.type == 'Entertainment')
+
+const getGroups = () => get({ url: baseGroupUrl })
+  .then(objToArrayWithKeyAsId)
+  .then(onlyEnterTainment)
+
 
 module.exports = { createGroup, getGroups, editGroup }

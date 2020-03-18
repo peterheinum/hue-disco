@@ -66,7 +66,7 @@ const unsafeStartStream = ({ id, lights }) => {
                 ...flat(lightAndColorArray)
               ])
             ])
-            socket.send(message)
+            socket && socket.send(message)
           })
         })
         .on('error', e => {
@@ -76,8 +76,8 @@ const unsafeStartStream = ({ id, lights }) => {
           console.log('MESSAGE', msg)
         })
         .on('close', e => {
+          socket = null
           eventHub.on('emitLight', () => console.log('nah bruv socket is not connect'))
-          clearInterval(interval)
           console.log('CLOSE', e)
         })
     })

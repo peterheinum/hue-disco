@@ -5,7 +5,7 @@ const state = require('../utils/globalState')
 
 const { eventHub } = require('../utils/eventHub')
 const { calculateXY } = require('../utils/rgbToXY')
-const { startStream, stopStream } = require('./emitter')
+const { startStream, stopStream } = require('./socket')
 const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
 const { get, baseHueUrl, setLight, shadeRGBColor, sleep, getRgbFromCssStr } = require('../utils/helpers')
 
@@ -81,6 +81,17 @@ router.post('/flashLight/', async (req, res) => {
     await setLight({ id, on: true })
     res.send('ok')
   }
+})
+
+router.get('/testFunction', () => {
+  getGroups().then(async groups => {
+    state.currentGroup = groups[0]
+    for (let i = 0; i < groups.length; i++) {
+      await stopStream(groups[i].id)
+    }
+    startStream(state.currentGroup)
+    eventHub.emit('testFunction')
+  })
 })
 
 
