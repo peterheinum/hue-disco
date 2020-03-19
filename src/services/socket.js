@@ -44,7 +44,7 @@ const unsafeStartStream = ({ id, lights }) => {
       }
 
       options.psk[hueUserName] = hueClientKey
-      const socket = dtls.createSocket(options)
+      let socket = dtls.createSocket(options)
       socket
         .on('connected', e => {
           state.currentSync = id

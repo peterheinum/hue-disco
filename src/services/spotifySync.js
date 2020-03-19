@@ -2,6 +2,7 @@ require('dotenv').config({ path: __dirname + '../../.env' })
 const _request = require('request')
 const { eventHub } = require('../utils/eventHub')
 const { isEqual } = require('../utils/helpers')
+const globalState = require('../utils/globalState')
 
 const auth = {
   access_token: '',
@@ -14,7 +15,7 @@ const auth_headers = () => ({
   'Content-Type': 'application/json'
 })
 
-const request = async ({ options, method }) => {
+const request = async({ options, method }) => {
   !options['headers'] && (options['headers'] = auth_headers())
   return new Promise((res, rej) => {
     _request[method](options, (err, response, body) => {
@@ -83,7 +84,7 @@ const lastIndex = {
   segments: 0
 }
 
-const getSongVibe = async () => {
+const getSongVibe = async() => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-features/${id}`
 
@@ -128,7 +129,7 @@ const set_active_intervals = () => {
 }
 
 
-const getSongContext = async () => {
+const getSongContext = async() => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
 
@@ -154,7 +155,7 @@ const getSongContext = async () => {
   })
 
   const tock = Date.now() - track.tick
-  const initial_track_progress = track.progress_ms + tock 
+  const initial_track_progress = track.progress_ms + tock
   const progress_ms = track.progress_ms + tock
   const initial_progress_ms = Date.now()
 
@@ -222,11 +223,11 @@ const resetVariables = () => {
   })
 }
 
-const track_on_track = (progress_ms) => 
-  progress_ms + 200 > track.progress_ms && 
+const track_on_track = (progress_ms) =>
+  progress_ms + 200 > track.progress_ms &&
   progress_ms - 200 < track.progress_ms
 
-const getCurrentlyPlaying = async () => {
+const getCurrentlyPlaying = async() => {
   const url = 'https://api.spotify.com/v1/me/player'
 
   const options = { url }
@@ -252,24 +253,23 @@ const getCurrentlyPlaying = async () => {
 
 
 eventHub.on('startPingInterval', () => {
-  
-  if(auth.access_token) {
+
+  if (auth.access_token) {
     console.log('yeah alright then lets do this')
     pingInterval = setInterval(() => getCurrentlyPlaying(), 5000)
-  }
-  else {
+  } else {
     console.log('no auth token bruv')
   }
 })
 
-eventHub.on('clearPingInterval', () => { 
+eventHub.on('clearPingInterval', () => {
   clearInterval(syncInterval)
   clearInterval(pingInterval)
 })
 
 eventHub.on('auth_recieved', recievedAuth => {
   console.log('AUTH RECIEVED BABTYYYY,', recievedAuth)
-  Object.assign(auth, recievedAuth) 
+  Object.assign(auth, recievedAuth)
   getCurrentlyPlaying()
 
   eventHub.emit('startPingInterval')

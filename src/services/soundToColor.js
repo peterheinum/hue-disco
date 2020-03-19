@@ -6,6 +6,9 @@ const state = require('../utils/globalState')
 
 const avg = arr => arr.reduce((acc, cur) => acc += cur, 0) / arr.length
 
+const round = number => Math.round(number)
+const doubleRGB = (r, g, b) => [round(r), round(r), round(g), round(g), round(b), round(b)]
+
 let lastBeat = Date.now()
 let distanceBetweenBeats
 const lastSegments = []
@@ -13,15 +16,19 @@ let currentPitch
 let interval
 let n = false
 
-let functionSwitch = false
+let functionSwitch = null
 
 let interpolation
+const randomRgb = () => `rgb(${rand(255)},${rand(100)},${rand(255)})`
+let lastRandom = randomRgb()
+
 const startInterpolate = () => {
-  const randomRgb = () => `rgb(${rand(255)},${rand(100)},${rand(255)})`
-  const a = 'rgb(255, 0, 0)'
-  const b = 'rgb(0, 0, 255)'
-  
-  interpolation = d3.interpolateRgb(a, b)
+  // const a = n ? 'rgb(0, 0, 255)' : 'rgb(255, 0, 0)'
+  // const b = !n ? 'rgb(0, 0, 255)' : 'rgb(255, 0, 0)'
+
+  let random = randomRgb()
+  interpolation = d3.interpolateRgb(lastRandom, random)
+  lastRandom = random
 }
 
 eventHub.on('testFunction', () => {
@@ -29,32 +36,51 @@ eventHub.on('testFunction', () => {
 })
 
 const tweenAround = () => {
+  n = !n
   clearInterval(interval)
   startInterpolate()
 
   let i = 0
   interval = setInterval(() => {
-    if(i > 0.99) tweenAround()
-    i += 0.005
+    if (i > 0.99) {
+      return
+    }
+
+    i += 0.05
     const [r, g, b] = getRgbFromCssStr(interpolation(i))
-    console.log(convertRgbToBytes(r, g, b))
     emitRgb(r, g, b)
-  }, 20)
+  }, 50)
 }
 
-const emitRgb = (r, g, b) => {
+const emitRgb = (r, g, b, array = []) => {
   const { lights } = state.currentGroup
-  const colorMessage = lights.map(id => [0x00, 0x00, parseInt(id), r, r, g, g, b, b])
-
+  const colorMessage =
+    array.length ?
+    array.map(([id, ...rgb]) => [0x00, 0x00, parseInt(id), ...doubleRGB(...rgb)]) :
+    lights.map(id => [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)])
+  console.log(colorMessage)
   eventHub.emit('emitLight', colorMessage)
 }
 
 
-const hardBlink = () => {
-  if (!state.currentGroup) {
-    return
+const switchAndBlink = () => {
+  n = !n
+
+  const { lights } = state.currentGroup
+  if (count % 2 == 0) {
+    const lightArray = lights.map((id, index) => ([id, index % 2 == 0 ? n ? doubleRGB(255, 0, 0) : doubleRGB(0, 0, 255) : !n ? doubleRGB(255, 0, 0) : doubleRGB(0, 0, 255)]))
+    console.log('SWITCH 2')
+    emitRgb(null, null, null, lightArray)
   }
 
+  if (count % 2 == 1) {
+    const lightArray = lights.map((id, index) => ([id, index % 2 == 0 ? n ? doubleRGB(0, 255, 0) : doubleRGB(0, 0, 255) : !n ? doubleRGB(0, 255, 0) : doubleRGB(0, 0, 255)]))
+    console.log('SWITCH 4')
+    emitRgb(null, null, null, lightArray)
+  }
+}
+
+const hardBlink = () => {
   n = !n
 
   const avgLoudnessMaxTime = avg(lastSegments.map(x => x.loudness_max_time))
@@ -64,70 +90,40 @@ const hardBlink = () => {
     Math.floor((avgLoudnessMaxTime / 60) * 255) :
     Math.floor(avgLoudnessMaxTime)
 
-  const blue = avgDuration < 300
-    ? Math.floor(avgDuration)
-    : avgDuration / 2 > 150
-      ? avgDuration / 4
-      : avgDuration / 2
-
-  const brightness = n ? 200 : 100
+  const blue = avgDuration < 300 ?
+    Math.floor(avgDuration) :
+    avgDuration / 2 > 150 ?
+    avgDuration / 4 :
+    avgDuration / 2
 
   const green = ((currentPitch / 12) * 255)
 
-  distanceBetweenBeats = 0 - ((lastBeat - Date.now()) / 2)
-  lastBeat = Date.now()
-
-
-  const { lights } = state.currentGroup
-  const values = lights.map(() => convertRgbToBytes(red, green, blue)).reduce((acc, cur, index) => ({ ...acc, [index]: cur }), {})
-  const lightAndColorArray = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...flat(values[index]), brightness, brightness])
-  const turnedofLights = lights.map(id => [0x00, 0x00, parseInt(id), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-
   emitRgb(red, green, blue)
-  emitRgb(0, 0, 0)
-  // eventHub.emit('emitLight', lightAndColorArray)
-  // setTimeout(() => eventHub.emit('emitLight', ), distanceBetweenBeats)
+  console.log('hardblink')
+  console.log(red, green, blue)
+    // setTimeout(() => emitRgb(0, 0, 0), )
 }
 
-const switchAndBlink = () => {
-  if (!state.currentGroup) {
+const lightEffects = [tweenAround, hardBlink]
+
+const getCurrentFunction = () => lightEffects[functionSwitch]
+let count = 0
+eventHub.on('beat', ([beat, index]) => {
+  count++
+
+  if (count % 4 != 0 || !state.currentGroup) {
     return
   }
 
-  n = !n
-  const brightness = 255
-
-
-  const { lights } = state.currentGroup
-  const values = lights.map((__, index) =>
-    n ?
-      index % 2 == 0 ?
-        convertRgbToBytes(0, 255, 0) :
-        convertRgbToBytes(255, 0, 0) :
-      index % 2 != 0 ?
-        convertRgbToBytes(0, 255, 0) :
-        convertRgbToBytes(255, 0, 0)
-  ).reduce((acc, cur, index) => ({ ...acc, [index]: cur }), {})
-  const lightAndColorArray = lights.map((id, index) => [0x00, 0x00, parseInt(id), ...flat(values[index]), brightness, brightness])
-
-  eventHub.emit('emitLight', lightAndColorArray)
-}
-
-const getCurrentFunction = () => functionSwitch
-  ? hardBlink
-  : switchAndBlink
-
-
-eventHub.on('beat', ([beat, index]) => {
   distanceBetweenBeats = 0 - ((lastBeat - Date.now()) / 2)
   lastBeat = Date.now()
+  console.log(getCurrentFunction())
   getCurrentFunction()()
 })
 
 eventHub.on('section', () => {
-  if(state.currentGroup) {
-    functionSwitch = !functionSwitch
-  }
+  functionSwitch = rand(lightEffects.length)
+  console.log({ functionSwitch })
 })
 
 //Bar is the first beat
