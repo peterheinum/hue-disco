@@ -1,5 +1,5 @@
 module.exports = {
-  currentSync: null,
+  hasSocket: null,
   existingGroups: [],
   r: null,
   g: null,

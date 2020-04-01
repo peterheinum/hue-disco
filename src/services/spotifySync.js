@@ -18,7 +18,7 @@ const auth_headers = () => ({
   'Content-Type': 'application/json'
 })
 
-const request = async({ options, method }) => {
+const request = async ({ options, method }) => {
   !options['headers'] && (options['headers'] = auth_headers())
   return new Promise((res, rej) => {
     _request[method](options, (err, response, body) => {
@@ -87,7 +87,7 @@ const lastIndex = {
   segments: 0
 }
 
-const getSongVibe = async() => {
+const getSongVibe = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-features/${id}`
 
@@ -132,7 +132,7 @@ const set_active_intervals = () => {
 }
 
 
-const getSongContext = async() => {
+const getSongContext = async () => {
   const { id } = track
   const url = `https://api.spotify.com/v1/audio-analysis/${id}`
 
@@ -230,26 +230,32 @@ const track_on_track = (progress_ms) =>
   progress_ms + 200 > track.progress_ms &&
   progress_ms - 200 < track.progress_ms
 
-const getCurrentlyPlaying = async() => {
-  const url = 'https://api.spotify.com/v1/me/player'
+const getCurrentlyPlaying = async () => {
+  try {
 
-  const options = { url }
-  const tick = Date.now()
-  const response = await request({ options, method: 'get' })
-  if (response.error) {
-    eventHub.emit('renew_spotify_token')
-    console.error('error:', response)
-    return
-  }
 
-  const { item, progress_ms, is_playing } = JSON.parse(response)
-  const { id, album, artists, duration_ms } = item
-  if (is_playing && id !== track.last_sync_id && !track_on_track()) {
-    clearInterval(syncInterval)
-    resetVariables()
-    Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
-    getSongVibe()
-    getSongContext()
+    const url = 'https://api.spotify.com/v1/me/player'
+
+    const options = { url }
+    const tick = Date.now()
+    const response = await request({ options, method: 'get' })
+    if (response.error) {
+      eventHub.emit('renew_spotify_token')
+      console.error('error:', response)
+      return
+    }
+
+    const { item, progress_ms, is_playing } = JSON.parse(response)
+    const { id, album, artists, duration_ms } = item
+    if (is_playing && id !== track.last_sync_id && !track_on_track()) {
+      clearInterval(syncInterval)
+      resetVariables()
+      Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
+      getSongVibe()
+      getSongContext()
+    }
+  } catch (error) {
+    console.log(error)
   }
 }
 
@@ -271,7 +277,7 @@ eventHub.on('authRecieved', recievedAuth => {
   Object.assign(auth, recievedAuth)
   fs.writeFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`), JSON.stringify({ auth, timestamp: Date.now() }))
   getCurrentlyPlaying()
-  
+
   eventHub.emit('startPingInterval')
 })
 
@@ -282,7 +288,7 @@ eventHub.on('authRecieved', recievedAuth => {
 const quickStart = () => {
   const json = fs.readFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`))
   const { auth: _auth, timestamp } = JSON.parse(json)
-  if(Date.now() - timestamp < 3600000) {
+  if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, _auth)
     eventHub.emit('startPingInterval')
     eventHub.emit('quickStart')
@@ -298,6 +304,7 @@ eventHub.on('quickStart', () => {
     globalState.currentGroup = groups[0]
     await getGroupsAndStopStreams()
     startStream()
+    require('./lights')
   })
 })
 

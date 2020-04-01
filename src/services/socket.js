@@ -87,7 +87,7 @@ const connectToSocket = () => {
   console.log('connectToSocket')
   socket
     .on('connected', e => {
-      state.currentSync = state.currentGroup.id
+      state.hasSocket = true
       console.log('connected')
       sendInitMessage(socket)     
       eventHub.on('emitLight', lights => {
@@ -97,12 +97,14 @@ const connectToSocket = () => {
       })
     })
     .on('error', e => {
+      state.hasSocket = false
       console.log('ERROR', e)
       setTimeout(() => {
         restart()
       }, 30000)
     })
     .on('close', e => {
+      state.hasSocket = false
       eventHub.on('emitLight', () => console.log('nah bruv socket is not connect'))
       console.log('CLOSE', e)
     })

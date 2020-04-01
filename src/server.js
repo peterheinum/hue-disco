@@ -1,6 +1,5 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
 require('./services/spotifySync')
-require('./services/soundToColor')
 const express = require('express')()
 const http = require('http').createServer(express)
 const bodyParser = require('body-parser')

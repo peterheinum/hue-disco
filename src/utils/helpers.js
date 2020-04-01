@@ -3,7 +3,6 @@ const _request = require('request')
 const axios = require('axios')
 
 const hueUserName = process.env.HUE_CLIENT_KEY
-const hueClientKey = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
 
 const get = async ({ url, body, method = 'GET', headers }) => await fetch(url, { headers, method, body: JSON.stringify(body) }).then(res => res.json())
 const avg = arr => arr.reduce((acc, cur) => acc += cur, 0) / arr.length
