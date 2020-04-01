@@ -104,7 +104,6 @@ const connectToSocket = () => {
     })
     .on('close', e => {
       eventHub.on('emitLight', () => console.log('nah bruv socket is not connect'))
-      // restart()
       console.log('CLOSE', e)
     })
 }
