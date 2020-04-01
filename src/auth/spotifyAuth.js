@@ -31,7 +31,7 @@ router.get('/callback', async (req, res) => {
   const response = await request({ options, method: 'post' })
   const { access_token, refresh_token } = response
 
-  eventHub.emit('auth_recieved', { access_token, refresh_token })
+  eventHub.emit('authRecieved', { access_token, refresh_token })
   res.redirect('/')
 })
 

@@ -7,7 +7,7 @@ if (process.env.HUE_HUB == undefined) {
   fixEnv()
 }
 const convertRgbToBytes = require('../utils/convertRgbToBytes')
-const { flat, rand, getRgbFromCssStr, avg } = require('../utils/helpers')
+const { flat, rand, getRgbFromCssStr, avg, doubleRGB } = require('../utils/helpers')
 const { eventHub } = require('../utils/eventHub')
 const d3 = require('d3-interpolate')
 const globalState = require('../utils/globalState')
@@ -21,8 +21,7 @@ const state = {
 
 
 
-const round = number => Math.round(number)
-const doubleRGB = (r, g, b) => [round(r), round(r), round(g), round(g), round(b), round(b)]
+
 
 let lastBeat = Date.now()
 let distanceBetweenBeats
@@ -185,6 +184,7 @@ const colorMap = {
   'A#': 'rgb(90, 230, 150)',
   'B': 'rgb(229, 229, 229)'
 }
+
 let distanceBetweenSegments
 let lastSegmentTimeStamp
 
@@ -194,10 +194,10 @@ const newTone = (rgb) => JSON.stringify(rgb) !== JSON.stringify(currentRgb)
 eventHub.on('segment', ([segment, index]) => {
   distanceBetweenSegments = 0 - ((lastSegmentTimeStamp - Date.now()) / 2)
   lastSegmentTimeStamp = Date.now()
-  console.log(segment)
-  const { pitches, duration, loudness_max_time } = segment
+  // console.log(segment)
+  const { pitches, duration, loudness_start, loudness_max, loudness_max_time } = segment
+
   // if (loudness_max_time > 70) {
-    // console.log(segment)
     const [r, g, b] = getRgbFromCssStr(colorMap[convertPitchToNote(pitches)])
     if (globalState.currentGroup && newTone({ r, g, b })) {
       Object.assign(currentRgb, { r, g, b })

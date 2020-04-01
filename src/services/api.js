@@ -84,15 +84,7 @@ router.post('/flashLight/', async (req, res) => {
 })
 
 router.get('/testFunction', () => {
-  getGroups().then(async groups => {
-    state.currentGroup = groups[0]
-    for (let i = 0; i < groups.length; i++) {
-      await stopStream(groups[i].id)
-    }
-    startStream(state.currentGroup)
-    eventHub.emit('testFunction')
-  })
+  eventHub.emit('quickStart')
 })
-
 
 module.exports = router

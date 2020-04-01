@@ -1,5 +1,9 @@
+//THIS FILE NOTHING TO DO WITH THE REST OF THE PROJECT
+//THIS FILE NOTHING TO DO WITH THE REST OF THE PROJECT
+//THIS FILE NOTHING TO DO WITH THE REST OF THE PROJECT
+//THIS FILE NOTHING TO DO WITH THE REST OF THE PROJECT
+
 require('dotenv').config({ path: __dirname + '../../.env' })
-  // const {get, sleep } = require('../utils/helpers')
 const fetch = require('node-fetch')
 const get = async({ url, body, method, headers }) => await fetch(url, { headers, method, body: JSON.stringify(body) }).then(res => res.json())
 
@@ -15,6 +19,7 @@ const set_current_color = ({ id, hue, bri }) => state.lights.splice(state.lights
 
 const hue_hub = () => '192.168.1.90'
 const api_key = () => 'GVkklY88EU3grnHKHDlVzGJh7hLmguoWFmhLuDSP'
+
 const state = {
   lights: [],
   details: [],

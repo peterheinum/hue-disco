@@ -1,95 +1,112 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
 
 const axios = require('axios')
-const { requireUncached, baseHueUrl, rand, flat } = require('../utils/helpers')
+const { getEntertainmentGroups, baseGroupUrl, flat, doubleRGB } = require('../utils/helpers')
 const { eventHub } = require('../utils/eventHub')
-const convertRgbToBytes = require('../utils/convertRgbToBytes')
 const state = require('../utils/globalState')
-
 
 const hueUserName = process.env.HUE_CLIENT_KEY
 const hueClientKey = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
-const baseGroupUrl = `${baseHueUrl(hueUserName)}/groups`
 
-const stopStream = async id => {
-  await axios.put(`${baseGroupUrl}/${id}`, { stream: { active: false } })
-  return Promise.resolve()
-}
+const stopStream = id => new Promise((resolve, reject) =>
+  axios
+    .put(`${baseGroupUrl}/${id}`, { stream: { active: false } })
+    .then(resolve)
+    .catch(reject)
+)
 
-const startStream = async payload => {
-  try {
-    for (let i = 0; i < state.existingGroups.length; i++) {
-      const { id } = state.existingGroups[i]
-      await stopStream(id)
-    }
-    unsafeStartStream(payload || state.currentGroup)
-  } catch (error) {
-    startStream(payload)
-  }
-}
+const stopEachStream = groups => new Promise((resolve, reject) =>
+  Promise.all(groups.map(({ id }) => stopStream(id)))
+    .then(resolve)
+    .catch(reject)
+)
+
+const getGroupsAndStopStreams = () => new Promise((resolve, reject) =>
+  getEntertainmentGroups()
+    .then(stopEachStream)
+    .then(resolve)
+    .catch(reject)
+)
+
+const restart = () => getGroupsAndStopStreams().then(() => startStream())
+
 let i = 0
-const unsafeStartStream = ({ id, lights }) => {
+const startStream = () => {
   i++
   console.log('unsafeStartStream has been called ', i)
-  axios.put(`${baseGroupUrl}/${id}`, { stream: { active: true } })
-    .then(() => {
-      const options = {
-        type: 'udp4',
-        address: process.env.HUE_HUB,
-        port: 2100,
-        psk: {
-          [hueUserName]: hueClientKey
-        },
-        timeout: 1000
-      }
+  console.log('connecting to: ', state.currentGroup.id)
+  axios.put(`${baseGroupUrl}/${state.currentGroup.id}`, { stream: { active: true } })
+    .then(connectToSocket)
+    .catch(restart)
+}
 
-      options.psk[hueUserName] = hueClientKey
-      delete require.cache[require.resolve('node-dtls-client')]
-      const dtls = require('node-dtls-client').dtls
+const getSocket = () => {
+  const options = {
+    type: 'udp4',
+    address: process.env.HUE_HUB,
+    port: 2100,
+    psk: {
+      [hueUserName]: hueClientKey
+    },
+    timeout: 1000
+  }
 
-      let socket = dtls.createSocket(options)
-      socket
-        .on('connected', e => {
-          state.currentSync = id
-          console.log('connected')
-          eventHub.on('emitLight', lightAndColorArray => {
-            const message = Buffer.concat([
-              Buffer.from("HueStream", "ascii"),
-              Buffer.from([
-                0x01, 0x00,
+  options.psk[hueUserName] = hueClientKey
+  delete require.cache[require.resolve('node-dtls-client')]
+  const dtls = require('node-dtls-client').dtls
 
-                0x07,
+  return dtls.createSocket(options)
+}
 
-                0x00, 0x00,
+const formatSocketMessage = lights => {
+  return Buffer.concat([
+    Buffer.from("HueStream", "ascii"),
+    Buffer.from([
+      0x01, 0x00,
 
-                0x00,
+      0x07,
 
-                0x00,
+      0x00, 0x00,
 
-                ...flat(lightAndColorArray)
-              ])
-            ])
-            socket && socket.send(message)
-          })
-        })
-        .on('error', e => {
-          console.log('ERROR', e)
-        })
-        .on('message', msg => {
-          console.log('MESSAGE', msg)
-        })
-        .on('close', e => {
-          socket = null
-          eventHub.on('emitLight', () => console.log('nah bruv socket is not connect'))
-          let revivalInterval = setInterval(async () => {
-            await startStream()
-            if(socket !== null) {
-              clearInterval(revivalInterval)
-            } 
-          }, 10000)
-          console.log('CLOSE', e)
-        })
+      0x00,
+
+      0x00,
+
+      ...flat(lights)
+    ])
+  ])
+}
+
+const sendInitMessage = socket => {
+  const lights = state.currentGroup.lights.map(id => [0x00, 0x00, parseInt(id), ...doubleRGB(255, 0, 0)])
+  socket.send(formatSocketMessage(lights))
+}
+
+const connectToSocket = () => {
+  const socket = getSocket()
+  console.log('connectToSocket')
+  socket
+    .on('connected', e => {
+      state.currentSync = state.currentGroup.id
+      console.log('connected')
+      sendInitMessage(socket)     
+      eventHub.on('emitLight', lights => {
+        const message = formatSocketMessage(lights)
+
+        socket && socket.send(message)
+      })
+    })
+    .on('error', e => {
+      console.log('ERROR', e)
+      setTimeout(() => {
+        restart()
+      }, 30000)
+    })
+    .on('close', e => {
+      eventHub.on('emitLight', () => console.log('nah bruv socket is not connect'))
+      // restart()
+      console.log('CLOSE', e)
     })
 }
 
-module.exports = { stopStream, startStream }
+module.exports = { stopStream, startStream, getGroupsAndStopStreams }

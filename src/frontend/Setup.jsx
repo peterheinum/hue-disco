@@ -39,7 +39,6 @@ export default ({ lights, setMenuChoice, existingGroups, setExistingGroups }) =>
     flashLight(light)
   }
 
-
   const addOrRemoveFromGroup = lightId => {
     const removeLightFromGroup = (id, group) => {
       const newGroup = { ...group, lights: group.lights.filter(light => light != id) }
@@ -72,7 +71,6 @@ export default ({ lights, setMenuChoice, existingGroups, setExistingGroups }) =>
   }
 
   const handleSave = async () => {
-    console.log(creating, editing)
     if (creating) {
       await axios.post('/api/createGroup/', { lightsForSetup })
       alert(`group has been created with [${lightsForSetup.map(x => x.id)}]`)
@@ -82,9 +80,9 @@ export default ({ lights, setMenuChoice, existingGroups, setExistingGroups }) =>
       await axios.post('/api/editGroup/', { group: existingGroups.find(({ id }) => id == editingGroup) })
       alert(`group ${editingGroup} has been saved`)
     }
-    
+
     setMenuChoice(null)
-  }     
+  }
 
   return (
     <div style={bigColumnContainer}>

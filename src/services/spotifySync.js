@@ -250,15 +250,12 @@ const getCurrentlyPlaying = async() => {
     Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
     getSongVibe()
     getSongContext()
-    console.log('aaaa')
   }
 }
 
 
 eventHub.on('startPingInterval', () => {
-  console.log('yeah')
   if (auth.access_token) {
-    console.log('yeah alright then lets do this')
     pingInterval = setInterval(() => getCurrentlyPlaying(), 5000)
   } else {
     console.log('no auth token bruv')
@@ -275,16 +272,34 @@ eventHub.on('authRecieved', recievedAuth => {
   fs.writeFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`), JSON.stringify({ auth, timestamp: Date.now() }))
   getCurrentlyPlaying()
   
-  // eventHub.emit('startPingInterval')
+  eventHub.emit('startPingInterval')
 })
 
-const existingAuth = () => {
+
+
+
+//UTILITIES MADE FOR FASTER DEVELOPMENT
+const quickStart = () => {
   const json = fs.readFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`))
   const { auth: _auth, timestamp } = JSON.parse(json)
   if(Date.now() - timestamp < 3600000) {
     Object.assign(auth, _auth)
     eventHub.emit('startPingInterval')
+    eventHub.emit('quickStart')
   }
 }
 
-existingAuth()
+const { getGroups } = require('../services/groupHandler')
+const { startStream, getGroupsAndStopStreams } = require('../services/socket')
+const globalState = require('../utils/globalState')
+eventHub.on('quickStart', () => {
+  console.log('quickStart')
+  getGroups().then(async groups => {
+    globalState.currentGroup = groups[0]
+    await getGroupsAndStopStreams()
+    startStream()
+  })
+})
+
+
+quickStart()
