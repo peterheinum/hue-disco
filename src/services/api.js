@@ -6,7 +6,7 @@ const state = require('../utils/globalState')
 const { eventHub } = require('../utils/eventHub')
 const { calculateXY } = require('../utils/rgbToXY')
 const { startStream, stopStream } = require('./socket')
-const { createGroup, getGroups, editGroup } = require('../utils/groupHandler')
+const { createGroup, getGroups, editGroup } = require('./groupHandler')
 const { get, baseHueUrl, setLight, shadeRGBColor, sleep, getRgbFromCssStr } = require('../utils/helpers')
 
 router.get('/getConfig', async (req, res) => {

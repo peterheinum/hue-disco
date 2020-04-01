@@ -1,8 +1,11 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
 const _request = require('request')
+const fs = require('fs')
+const path = require('path')
+
 const { eventHub } = require('../utils/eventHub')
 const { isEqual } = require('../utils/helpers')
-const globalState = require('../utils/globalState')
+
 
 const auth = {
   access_token: '',
@@ -253,7 +256,7 @@ const getCurrentlyPlaying = async() => {
 
 
 eventHub.on('startPingInterval', () => {
-
+  console.log('yeah')
   if (auth.access_token) {
     console.log('yeah alright then lets do this')
     pingInterval = setInterval(() => getCurrentlyPlaying(), 5000)
@@ -267,10 +270,21 @@ eventHub.on('clearPingInterval', () => {
   clearInterval(pingInterval)
 })
 
-eventHub.on('auth_recieved', recievedAuth => {
-  console.log('AUTH RECIEVED BABTYYYY,', recievedAuth)
+eventHub.on('authRecieved', recievedAuth => {
   Object.assign(auth, recievedAuth)
+  fs.writeFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`), JSON.stringify({ auth, timestamp: Date.now() }))
   getCurrentlyPlaying()
-
-  eventHub.emit('startPingInterval')
+  
+  // eventHub.emit('startPingInterval')
 })
+
+const existingAuth = () => {
+  const json = fs.readFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`))
+  const { auth: _auth, timestamp } = JSON.parse(json)
+  if(Date.now() - timestamp < 3600000) {
+    Object.assign(auth, _auth)
+    eventHub.emit('startPingInterval')
+  }
+}
+
+existingAuth()
