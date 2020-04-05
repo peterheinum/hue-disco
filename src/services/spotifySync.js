@@ -301,7 +301,7 @@ const globalState = require('../utils/globalState')
 eventHub.on('quickStart', () => {
   console.log('quickStart')
   getGroups().then(async groups => {
-    globalState.currentGroup = groups[0]
+    globalState.currentGroup = groups[1]
     await getGroupsAndStopStreams()
     startStream()
     require('./lights')

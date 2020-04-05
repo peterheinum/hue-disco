@@ -2,7 +2,7 @@ import express from 'express'
 import React from 'react'
 import { renderToString } from 'react-dom/server'
 import App from '../frontend/App'
-import hbs from 'handlebars';
+import hbs from 'handlebars'
 
 const router = express.Router()
 
@@ -13,9 +13,9 @@ router.get('/', async (req, res) => {
     <script src='/vendor.js' charset='utf-8'></script>
     `
 
-  const handleBarsTemplate = hbs.compile(htmlTemplate);
-  const reactTemplate = renderToString(<App />);
-  const compiledHtml = handleBarsTemplate({ reactTemplate });
+  const handleBarsTemplate = hbs.compile(htmlTemplate)
+  const reactTemplate = renderToString(<App />)
+  const compiledHtml = handleBarsTemplate({ reactTemplate })
   res.send(compiledHtml)
 })
 
