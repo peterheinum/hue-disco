@@ -21,8 +21,7 @@ const maxOneRGB = () => {
 }
 
 const changeIntensity = ({r, g, b}, intensity) => ({ r: intensity * r, g: intensity * g, b: intensity * b })
-
-
+const isBusy = id => lights[id].busy
 
 if (globalState.currentGroup === null) {
   globalState.currentGroup = {}
@@ -31,12 +30,14 @@ if (globalState.currentGroup === null) {
 
 const populateLights = () => {
   lights = globalState.currentGroup.lights.reduce((acc, id) => {
-    acc[id] = { id, ...zeroRgb(), busy: false, tones: [], interval: null }
+    acc[id] = { id, ...zeroRgb(), busy: false, tones: [], interval: null, busyCount: 0 }
     return acc
   }, {})
 }
 
 const tweenLightTo = (rgb, id, ms = 5000) => {
+  if(isBusy(id)) return
+  console.log(id, 'tweening to ', rgb)
   const currentRgb = getRgbAsString(lights[id])
   const destinationRgb = getRgbAsString(rgb)
   const interpolation = interpolateRgb(currentRgb, destinationRgb)
@@ -45,8 +46,9 @@ const tweenLightTo = (rgb, id, ms = 5000) => {
   lights[id].interval = setInterval(() => {
     if (i > 0.99) {
       const [r, g, b] = getRgbFromCssStr(interpolation(1))
-      Object.assign(lights[id], { r, g, b, busy: false })
       clearInterval(lights[id].interval)
+      Object.assign(lights[id], { r, g, b, busy: false })
+      console.log(lights[id])
     }
 
     i += 20 / ms
@@ -61,23 +63,38 @@ const init = () => {
   initRan = true
 }
 
+// const colorMap = {
+//   'C': 'rgb(222, 122, 253)',
+//   'C#': 'rgb(159, 54, 191)',
+//   'D': 'rgb(88, 247, 221)',
+//   'D#': 'rgb(29, 169, 146)',
+//   'E': 'rgb(245, 178, 77)',
+//   'F': 'rgb(10, 101, 220)',
+//   'F#': 'rgb(10, 50, 255)',
+//   'G': 'rgb(50, 255, 10)',
+//   'G#': 'rgb(30, 230, 20)',
+//   'A': 'rgb(90, 180, 190)',
+//   'A#': 'rgb(90, 230, 150)',
+//   'B': 'rgb(254, 2, 50)'
+// }
+
 const colorMap = {
-  'C': 'rgb(222, 122, 253)',
-  'C#': 'rgb(159, 54, 191)',
-  'D': 'rgb(88, 247, 221)',
-  'D#': 'rgb(29, 169, 146)',
-  'E': 'rgb(245, 178, 77)',
-  'F': 'rgb(10, 101, 220)',
-  'F#': 'rgb(10, 50, 255)',
-  'G': 'rgb(50, 255, 10)',
-  'G#': 'rgb(30, 230, 20)',
-  'A': 'rgb(90, 180, 190)',
-  'A#': 'rgb(90, 230, 150)',
-  'B': 'rgb(254, 2, 50)'
+  'C': 'rgb(255, 113, 206)',
+  'C#': 'rgb(1, 205, 254)',
+  'D': 'rgb(5, 255, 161)',
+  'D#': 'rgb(185, 103, 255)',
+  'E': 'rgb(255, 251, 150)',
+  'F': 'rgb(255, 113, 206)',
+  'F#': 'rgb(1, 205, 254)',
+  'G': 'rgb(5, 255, 161)',
+  'G#': 'rgb(185, 103, 255)',
+  'A': 'rgb(255, 251, 150)',
+  'A#': 'rgb(1, 205, 254)',
+  'B': 'rgb(255, 113, 206)'
 }
 
-const getNonBusyLight = (_lights = lights) => {
-  const freeLights = Object.keys(_lights).filter(key => !_lights[key].busy)
+const getNonBusyLight = () => {
+  const freeLights = Object.keys(lights).filter(key => !lights[key].busy)
   return freeLights[rand(freeLights.length - 1)]
 }
 
@@ -90,9 +107,10 @@ eventHub.on('beat', () => {
 })
 
 
+
 const allMax = () => {
-  Object.keys(lights).forEach(key => {
-    Object.assign(lights[key], changeIntensity(maxRed, 0.8))
+  Object.keys(lights).forEach(id => {
+    !isBusy(id) && Object.assign(lights[id], changeIntensity(maxRed, 0.8))
   })
 }
 
@@ -100,13 +118,14 @@ eventHub.on('bar', () => {
   allMax()
 })
 
+const getTonesForLight = id => lights[id].tones
 
 const getLightsForTone = tone => {
   let light = null
-  Object.keys(lights).forEach(key => {
-    const { tones } = lights[key]
+  Object.keys(lights).forEach(id => {
+    const tones = getTonesForLight(id)
     if (tones.includes(tone)) {
-      light = lights[key]
+      light = lights[id]
     }
   })
   return light
@@ -122,7 +141,6 @@ const assignTone = (id, tone) => {
 }
 
 eventHub.on('segment', ([segment, index]) => {
-  console.log('segment')
   if (!initRan) {
     init()
   }
@@ -133,10 +151,12 @@ eventHub.on('segment', ([segment, index]) => {
   const { id } = getLightsForTone(tone) || withLeastTones()
   !getLightsForTone(tone) && assignTone(id, tone)
 
-  console.log(globalState.hasSocket, !!lights[id], tone)
+  console.log(duration, tone)
   if (globalState.hasSocket) {
     if (lights[id]) {
-      Object.assign(lights[id], { r, g, b })
+      duration > 1000
+        ? tweenLightTo({ r, g, b }, id, duration)
+        : Object.assign(lights[id], { r, g, b })
     }
   }
 })
@@ -151,11 +171,19 @@ const emitLights = () => {
   eventHub.emit('emitLight', colorMessage)
 }
 
+const increaseBusyCount = id => {
+  lights[id].busyCount++
+  if(lights[id].busyCount > 20) {
+    lights[id].busyCount = 0
+    lights[id].busy = false
+  }
+}
 
 const dampenLights = () => {
   Object.keys(lights).forEach(id => {
-    const { r, g, b } = lights[id]
-    Object.assign(lights[id], changeIntensity({ r, g, b }, 0.9))
+    const { r, g, b, busy } = lights[id]
+    busy && increaseBusyCount(id)
+    !busy && Object.assign(lights[id], changeIntensity({ r, g, b }, 0.9))
   })
 }
 

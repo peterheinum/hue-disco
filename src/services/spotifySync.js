@@ -1,32 +1,25 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
-const _request = require('request')
+const axios = require('axios')
 const fs = require('fs')
 const path = require('path')
 
+const { get } = require('lodash')
 const { eventHub } = require('../utils/eventHub')
 const { isEqual } = require('../utils/helpers')
 
-
 const auth = {
   access_token: '',
-  refresh_token: ''
+  refresh_token: '',
+  timestamp: 0
 }
 
-const auth_headers = () => ({
-  'Authorization': 'Bearer ' + auth.access_token,
-  'Accept': 'application/json',
-  'Content-Type': 'application/json'
+const headers = () => ({
+  headers: {
+    'Authorization': 'Bearer ' + auth.access_token,
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  }
 })
-
-const request = async ({ options, method }) => {
-  !options['headers'] && (options['headers'] = auth_headers())
-  return new Promise((res, rej) => {
-    _request[method](options, (err, response, body) => {
-      err && rej(err)
-      body && res(body)
-    })
-  })
-}
 
 let syncInterval
 let pingInterval
@@ -46,8 +39,7 @@ const track = {
   duration_ms: 0,
   is_playing: false,
   duration_ms: 0,
-  song_is_synced: false,
-  last_sync_id: '',
+  current_sync_id: '',
 
   //Vibe
   danceability: 0,
@@ -71,7 +63,7 @@ const track = {
 
 const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
 
-const active_interval = {
+const activeInterval = {
   bars: {},
   beats: {},
   tatums: {},
@@ -87,19 +79,6 @@ const lastIndex = {
   segments: 0
 }
 
-const getSongVibe = async () => {
-  const { id } = track
-  const url = `https://api.spotify.com/v1/audio-features/${id}`
-
-  const options = { url }
-
-  const response = await request({ options, method: 'get' })
-
-  Object.assign(track, JSON.parse(response))
-  eventHub.emit('vibeRecieved', JSON.parse(response))
-  eventHub.on('vibeRecieved', item => console.log(item))
-}
-
 let syncTime = 0
 eventHub.on('addSyncTime', () => {
   syncTime += 50
@@ -111,7 +90,7 @@ eventHub.on('removeSyncTime', () => {
 
 const removeLastS = ([...str]) => str.reverse().slice(1, str.length).reverse().join('')
 
-const set_active_intervals = () => {
+const setActiveInterval = () => {
   const determineInterval = (type) => {
     const analysis = track[type]
     const progress = track.progress_ms + syncTime
@@ -123,25 +102,15 @@ const set_active_intervals = () => {
 
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
-    if (!isEqual(track[type][index], active_interval[type]) && lastIndex[type] < index) {
-      active_interval[type] = track[type][index]
+    if (!isEqual(track[type][index], activeInterval[type]) && lastIndex[type] < index) {
+      activeInterval[type] = track[type][index]
       lastIndex[type] = index
-      eventHub.emit(removeLastS(type), [active_interval[type], index])
+      eventHub.emit(removeLastS(type), [activeInterval[type], index])
     }
   })
 }
 
-
-const getSongContext = async () => {
-  const { id } = track
-  const url = `https://api.spotify.com/v1/audio-analysis/${id}`
-
-  const options = { url }
-  const response = await request({ options, method: 'get' })
-  const { meta, bars, beats, tatums, sections, segments } = JSON.parse(response)
-
-  Object.assign(track, { meta, bars, beats, tatums, sections, segments })
-
+const formatFirstInterval = () => {
   intervalTypes.forEach(t => {
     const type = track[t]
     type[0].duration = type[0].start + type[0].duration
@@ -156,22 +125,33 @@ const getSongContext = async () => {
       interval.duration = interval.duration * 1000
     })
   })
+}
 
-  const tock = Date.now() - track.tick
-  const initial_track_progress = track.progress_ms + tock
-  const progress_ms = track.progress_ms + tock
+const fixSync = () => {
+  const { tick, progress_ms } = track
+  const tock = Date.now() - tick
+  const initial_track_progress = progress_ms + tock
   const initial_progress_ms = Date.now()
+  Object.assign(track, {
+    progress_ms: progress_ms + tock + 500, 
+    initial_track_progress, 
+    initial_progress_ms
+  })
+}
 
-  Object.assign(track, { initial_track_progress, progress_ms, initial_progress_ms })
+const startSongSync = () => {
+  formatFirstInterval()
+  fixSync()
 
   syncInterval = setInterval(() => {
-    track.progress_ms = (Date.now() - initial_progress_ms) + initial_track_progress
-    set_active_intervals()
+    track.progress_ms = (Date.now() - get(track, 'initial_progress_ms')) + get(track, 'initial_track_progress')
+    setActiveInterval()
   }, 10)
 }
 
 const resetVariables = () => {
-  Object.assign(active_interval, {
+  clearInterval(syncInterval)
+  Object.assign(activeInterval, {
     bars: {},
     beats: {},
     tatums: {},
@@ -202,8 +182,7 @@ const resetVariables = () => {
     duration_ms: 0,
     is_playing: false,
     duration_ms: 0,
-    song_is_synced: false,
-    last_sync_id: '',
+    current_sync_id: '',
 
     //Vibe
     danceability: 0,
@@ -226,45 +205,123 @@ const resetVariables = () => {
   })
 }
 
-const track_on_track = (progress_ms) =>
-  progress_ms + 200 > track.progress_ms &&
-  progress_ms - 200 < track.progress_ms
+const authIsValid = () => {
+  const { timestamp } = auth
+  return timestamp === 0
+    ? false
+    : Date.now() - timestamp < 3600000
+}
 
-const getCurrentlyPlaying = async () => {
-  try {
+const getData = res => get(res, 'data')
 
+const extractMetaData = data => {
+  const { item, progress_ms, is_playing, tick } = data
+  if (!item || !is_playing) {
+    console.log('nah fam')
+    return
+  }
 
-    const url = 'https://api.spotify.com/v1/me/player'
+  const { id, album, artists, duration_ms } = item
 
-    const options = { url }
-    const tick = Date.now()
-    const response = await request({ options, method: 'get' })
-    if (response.error) {
-      eventHub.emit('renew_spotify_token')
-      console.error('error:', response)
-      return
-    }
-
-    const { item, progress_ms, is_playing } = JSON.parse(response)
-    const { id, album, artists, duration_ms } = item
-    if (is_playing && id !== track.last_sync_id && !track_on_track()) {
-      clearInterval(syncInterval)
-      resetVariables()
-      Object.assign(track, { id, tick, album, artists, duration_ms, progress_ms, is_playing, last_sync_id: id })
-      getSongVibe()
-      getSongContext()
-    }
-  } catch (error) {
-    console.log(error)
+  if (is_playing && id !== track.current_sync_id) {
+    Object.assign(track, {
+      id,
+      tick,
+      album,
+      artists,
+      duration_ms,
+      progress_ms,
+      is_playing,
+      current_sync_id: id
+    })
   }
 }
 
+const getCurrentlyPlaying = () => {
+  if (!authIsValid()) {
+    console.log('Auth invalid needs new auth')
+    return Promise.reject()
+  }
+
+  const url = 'https://api.spotify.com/v1/me/player'
+  const options = { url, ...headers() }
+  const tick = Date.now()
+
+  return new Promise((resolve, reject) => {
+    const resolveWithTick = data => resolve({ ...data, tick })
+
+    axios(options)
+      .then(getData)
+      .then(resolveWithTick)
+      .catch(reject)
+  })
+}
+
+const extractVibeData = data => {
+  Object.assign(track, data)
+  console.log('vibe data \n', data)
+}
+
+const getSongVibe = () => {
+  const url = `https://api.spotify.com/v1/audio-features/${get(track, 'id')}`
+  const options = { url, ...headers() }
+  return new Promise((resolve, reject) => {
+    axios(options)
+      .then(getData)
+      .then(resolve)
+      .catch(reject)
+  })
+}
+
+const checkIfNewSong = data => {
+  const { item, is_playing } = data
+  if (!is_playing) return
+
+  if (get(item, 'id') != track.current_sync_id) {
+    return data
+  }
+
+  return Promise.reject('song is not new')
+}
+
+const getSongContext = () => {
+  const url = `https://api.spotify.com/v1/audio-analysis/${get(track, 'id')}`
+  const options = { url, ...headers() }
+  return new Promise((resolve, reject) => {
+    axios(options)
+      .then(getData)
+      .then(resolve)
+      .catch(reject)
+  })
+}
+
+const extractAudioAnalysis = data => {
+  const { meta, bars, beats, tatums, sections, segments } = data
+  Object.assign(track, { meta, bars, beats, tatums, sections, segments })
+}
+
+const reset = data => {
+  resetVariables()
+  return data
+}
+
+
+const sync = () => {
+  getCurrentlyPlaying()
+    .then(checkIfNewSong)
+    .then(reset)
+    .then(extractMetaData)
+    .then(getSongVibe)
+    .then(extractVibeData)
+    .then(getSongContext)
+    .then(extractAudioAnalysis)
+    .then(startSongSync)
+    .catch(reject => console.log(reject))
+}
 
 eventHub.on('startPingInterval', () => {
-  if (auth.access_token) {
-    pingInterval = setInterval(() => getCurrentlyPlaying(), 5000)
-  } else {
-    console.log('no auth token bruv')
+  if (authIsValid()) {
+    pingInterval = setInterval(() => sync(), 5000)
   }
 })
 
@@ -274,8 +331,9 @@ eventHub.on('clearPingInterval', () => {
 })
 
 eventHub.on('authRecieved', recievedAuth => {
-  Object.assign(auth, recievedAuth)
-  fs.writeFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`), JSON.stringify({ auth, timestamp: Date.now() }))
+  const timestamp = Date.now()
+  Object.assign(auth, { ...recievedAuth, timestamp })
+  fs.writeFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`), JSON.stringify({ auth, timestamp }))
   getCurrentlyPlaying()
 
   eventHub.emit('startPingInterval')
@@ -286,12 +344,15 @@ eventHub.on('authRecieved', recievedAuth => {
 
 //UTILITIES MADE FOR FASTER DEVELOPMENT
 const quickStart = () => {
-  const json = fs.readFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`))
-  const { auth: _auth, timestamp } = JSON.parse(json)
-  if (Date.now() - timestamp < 3600000) {
-    Object.assign(auth, _auth)
-    eventHub.emit('startPingInterval')
-    eventHub.emit('quickStart')
+  const filePath = path.resolve(`${__dirname}/../utils/spotifyAuth`)
+  if (fs.existsSync(filePath)) {
+    const json = fs.readFileSync(filePath)
+    const { auth: _auth, timestamp } = JSON.parse(json)
+    if (Date.now() - timestamp < 3600000) {
+      Object.assign(auth, { ..._auth, timestamp })
+      eventHub.emit('startPingInterval')
+      eventHub.emit('quickStart')
+    }
   }
 }
 
