@@ -88,66 +88,7 @@ eventHub.on('removeSyncTime', () => {
   syncTime -= 50
 })
 
-const removeLastS = ([...str]) => str.reverse().slice(1, str.length).reverse().join('')
 
-const setActiveInterval = () => {
-  const determineInterval = (type) => {
-    const analysis = track[type]
-    const progress = track.progress_ms + syncTime
-    for (let i = 0; i < analysis.length; i++) {
-      if (i === (analysis.length - 1)) return i
-      if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
-    }
-  }
-
-  intervalTypes.forEach(type => {
-    const index = determineInterval(type)
-    if (!isEqual(track[type][index], activeInterval[type]) && lastIndex[type] < index) {
-      activeInterval[type] = track[type][index]
-      lastIndex[type] = index
-      eventHub.emit(removeLastS(type), [activeInterval[type], index])
-    }
-  })
-}
-
-const formatFirstInterval = () => {
-  intervalTypes.forEach(t => {
-    const type = track[t]
-    type[0].duration = type[0].start + type[0].duration
-    type[0].start = 0
-    type[type.length - 1].duration = (track.duration_ms / 1000) - type[type.length - 1].start
-    type.forEach(interval => {
-      if (interval.loudness_max_time) {
-        interval.loudness_max_time = interval.loudness_max_time * 1000
-      }
-
-      interval.start = interval.start * 1000
-      interval.duration = interval.duration * 1000
-    })
-  })
-}
-
-const fixSync = () => {
-  const { tick, progress_ms } = track
-  const tock = Date.now() - tick
-  const initial_track_progress = progress_ms + tock
-  const initial_progress_ms = Date.now()
-  Object.assign(track, {
-    progress_ms: progress_ms + tock + 500, 
-    initial_track_progress, 
-    initial_progress_ms
-  })
-}
-
-const startSongSync = () => {
-  formatFirstInterval()
-  fixSync()
-
-  syncInterval = setInterval(() => {
-    track.progress_ms = (Date.now() - get(track, 'initial_progress_ms')) + get(track, 'initial_track_progress')
-    setActiveInterval()
-  }, 10)
-}
 
 const resetVariables = () => {
   clearInterval(syncInterval)
@@ -205,6 +146,10 @@ const resetVariables = () => {
   })
 }
 
+const getData = obj => get(obj, 'data')
+
+const removeLastS = ([...str]) => str.reverse().slice(1, str.length).reverse().join('')
+
 const authIsValid = () => {
   const { timestamp } = auth
   return timestamp === 0
@@ -212,13 +157,46 @@ const authIsValid = () => {
     : Date.now() - timestamp < 3600000
 }
 
-const getData = res => get(res, 'data')
+const checkIfNewSong = data => {
+  const { item, is_playing } = data
+  if (!is_playing) return
+
+  if (get(item, 'id') != track.current_sync_id) {
+    return data
+  }
+
+  return Promise.reject('song is not new')
+}
+
+const reset = data => {
+  resetVariables()
+  return data
+}
+
+const getCurrentlyPlaying = () => {
+  if (!authIsValid()) {
+    console.log('Auth invalid needs new auth')
+    return Promise.reject({ error: 'expired-auth' })
+  }
+
+  const url = 'https://api.spotify.com/v1/me/player'
+  const options = { url, ...headers() }
+  const tick = Date.now()
+
+  return new Promise((resolve, reject) => {
+    const resolveWithTick = data => resolve({ ...data, tick })
+
+    axios(options)
+      .then(getData)
+      .then(resolveWithTick)
+      .catch(reject)
+  })
+}
 
 const extractMetaData = data => {
   const { item, progress_ms, is_playing, tick } = data
   if (!item || !is_playing) {
-    console.log('nah fam')
-    return
+    return Promise.reject({ error: 'not-playing' })
   }
 
   const { id, album, artists, duration_ms } = item
@@ -237,31 +215,6 @@ const extractMetaData = data => {
   }
 }
 
-const getCurrentlyPlaying = () => {
-  if (!authIsValid()) {
-    console.log('Auth invalid needs new auth')
-    return Promise.reject()
-  }
-
-  const url = 'https://api.spotify.com/v1/me/player'
-  const options = { url, ...headers() }
-  const tick = Date.now()
-
-  return new Promise((resolve, reject) => {
-    const resolveWithTick = data => resolve({ ...data, tick })
-
-    axios(options)
-      .then(getData)
-      .then(resolveWithTick)
-      .catch(reject)
-  })
-}
-
-const extractVibeData = data => {
-  Object.assign(track, data)
-  console.log('vibe data \n', data)
-}
-
 const getSongVibe = () => {
   const url = `https://api.spotify.com/v1/audio-features/${get(track, 'id')}`
   const options = { url, ...headers() }
@@ -273,15 +226,9 @@ const getSongVibe = () => {
   })
 }
 
-const checkIfNewSong = data => {
-  const { item, is_playing } = data
-  if (!is_playing) return
-
-  if (get(item, 'id') != track.current_sync_id) {
-    return data
-  }
-
-  return Promise.reject('song is not new')
+const extractVibeData = data => {
+  Object.assign(track, data)
+  console.log('vibe data \n', data)
 }
 
 const getSongContext = () => {
@@ -300,9 +247,77 @@ const extractAudioAnalysis = data => {
   Object.assign(track, { meta, bars, beats, tatums, sections, segments })
 }
 
-const reset = data => {
-  resetVariables()
-  return data
+
+
+
+
+const fixSync = () => {
+  const { tick, progress_ms } = track
+  const tock = Date.now() - tick
+  const initial_track_progress = progress_ms + tock
+  const initial_progress_ms = Date.now()
+  Object.assign(track, {
+    progress_ms: progress_ms + tock + 500,
+    initial_track_progress,
+    initial_progress_ms
+  })
+}
+
+const formatFirstInterval = () => {
+  intervalTypes.forEach(t => {
+    const type = track[t]
+    type[0].duration = type[0].start + type[0].duration
+    type[0].start = 0
+    type[type.length - 1].duration = (track.duration_ms / 1000) - type[type.length - 1].start
+    type.forEach(interval => {
+      if (interval.loudness_max_time) {
+        interval.loudness_max_time = interval.loudness_max_time * 1000
+      }
+
+      interval.start = interval.start * 1000
+      interval.duration = interval.duration * 1000
+    })
+  })
+}
+
+const setActiveInterval = () => {
+  const determineInterval = (type) => {
+    const analysis = track[type]
+    const progress = track.progress_ms + syncTime
+    for (let i = 0; i < analysis.length; i++) {
+      if (i === (analysis.length - 1)) return i
+      if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
+    }
+  }
+
+  intervalTypes.forEach(type => {
+    const index = determineInterval(type)
+    if (!isEqual(track[type][index], activeInterval[type]) && lastIndex[type] < index) {
+      activeInterval[type] = track[type][index]
+      lastIndex[type] = index
+      eventHub.emit(removeLastS(type), [activeInterval[type], index])
+    }
+  })
+}
+
+const startSongSync = () => {
+  formatFirstInterval()
+  fixSync()
+
+  syncInterval = setInterval(() => {
+    track.progress_ms = (Date.now() - get(track, 'initial_progress_ms')) + get(track, 'initial_track_progress')
+    setActiveInterval()
+    console.log(millisToMinutesAndSeconds(track.progress_ms))
+  }, 10)
+}
+const handleSyncErrors = error => {
+  console.log(error)
+}
+
+function millisToMinutesAndSeconds(millis) {
+  var minutes = Math.floor(millis / 60000);
+  var seconds = ((millis % 60000) / 1000).toFixed(0);
+  return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
 }
 
 
@@ -316,8 +331,10 @@ const sync = () => {
     .then(getSongContext)
     .then(extractAudioAnalysis)
     .then(startSongSync)
-    .catch(reject => console.log(reject))
+    .catch(handleSyncErrors)
 }
+
+
 
 eventHub.on('startPingInterval', () => {
   if (authIsValid()) {
@@ -325,22 +342,13 @@ eventHub.on('startPingInterval', () => {
   }
 })
 
-eventHub.on('clearPingInterval', () => {
-  clearInterval(syncInterval)
-  clearInterval(pingInterval)
-})
-
 eventHub.on('authRecieved', recievedAuth => {
   const timestamp = Date.now()
   Object.assign(auth, { ...recievedAuth, timestamp })
   fs.writeFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`), JSON.stringify({ auth, timestamp }))
-  getCurrentlyPlaying()
-
   eventHub.emit('startPingInterval')
+  eventHub.emit('quickStart')
 })
-
-
-
 
 //UTILITIES MADE FOR FASTER DEVELOPMENT
 const quickStart = () => {
@@ -356,16 +364,19 @@ const quickStart = () => {
   }
 }
 
-const { getGroups } = require('../services/groupHandler')
-const { startStream, getGroupsAndStopStreams } = require('../services/socket')
-const globalState = require('../utils/globalState')
 eventHub.on('quickStart', () => {
+  const { getGroups } = require('../services/groupHandler')
+  const { startStream, getGroupsAndStopStreams } = require('../services/socket')
+  const globalState = require('../utils/globalState')
+
   console.log('quickStart')
-  getGroups().then(async groups => {
+  getGroups().then(groups => {
+
     globalState.currentGroup = groups[1]
-    await getGroupsAndStopStreams()
-    startStream()
-    require('./lights')
+
+    getGroupsAndStopStreams()
+      .then(startStream)
+      .then(() => require('./lights'))
   })
 })
 

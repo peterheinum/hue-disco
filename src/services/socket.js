@@ -84,7 +84,6 @@ const sendInitMessage = socket => {
 
 const connectToSocket = () => {
   const socket = getSocket()
-  console.log('connectToSocket')
   socket
     .on('connected', e => {
       state.hasSocket = true
