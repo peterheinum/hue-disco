@@ -307,7 +307,7 @@ const startSongSync = () => {
   syncInterval = setInterval(() => {
     track.progress_ms = (Date.now() - get(track, 'initial_progress_ms')) + get(track, 'initial_track_progress')
     setActiveInterval()
-    console.log(millisToMinutesAndSeconds(track.progress_ms))
+    // console.log(millisToMinutesAndSeconds(track.progress_ms))
   }, 10)
 }
 const handleSyncErrors = error => {
@@ -387,4 +387,4 @@ const initie = () => {
 }
 
 quickStart()
-initie()
+// initie()
