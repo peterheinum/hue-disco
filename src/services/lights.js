@@ -1,27 +1,37 @@
-const { getRgbFromCssStr, rand, doubleRGB } = require('../utils/helpers')
+const { getRgbFromCssStr, rand, doubleRGB, round } = require('../utils/helpers')
 const globalState = require('../utils/globalState')
 const { interpolateRgb } = require('d3-interpolate')
 const { eventHub } = require('../utils/eventHub')
-const convertRgbToBytes = require('../utils/convertRgbToBytes')
 const convertPitchToNote = require('../utils/convertPitchToNote')
-const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
 
+/* UTILS */
+const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
+const roundRgb = ({ r, g, b }) => ({ r: round(r), g: round(g), b: round(b) })
+const getRgb = ({ r, g, b }) => ({ r, g, b })
+const changeIntensity = ({ r, g, b }, intensity) => roundRgb({ r: intensity * r, g: intensity * g, b: intensity * b })
+const isBusy = id => lights[id].busy
+
+
+/* State */
 let lights = {}
 let initRan = false
 
+const getLights = () => Object.assign({}, lights)
+const lightLoop = () => Object.keys(getLights())
 
-const zeroRgb = () => ({ r: 0, g: 0, b: 0 })
-const white = () => ({  r: 255, g: 255, b: 255 })
-const maxRed = {  r: 255, g: 0, b: 0 }
-const maxGreen = {  r: 0, g: 255, b: 0 }
-const maxBlue = {  r: 0, g: 0, b: 255 }
+/* Sweet variables */
+const zeroRgb = { r: 0, g: 0, b: 0 }
+const white = { r: 255, g: 255, b: 255 }
+const maxRed = { r: 240, g: 10, b: 10 }
+const maxGreen = { r: 0, g: 255, b: 0 }
+const maxBlue = { r: 0, g: 0, b: 255 }
+const maxPurple = { r: 255, g: 0, b: 255 }
+const halfRed = { r: 50, g: 0, b: 0 }
 
-const maxOneRGB = () => {
-  return [maxRed, maxGreen, maxBlue][rand(2)]
-}
+const getRandomArbitrary = (min, max) => Math.random() * (max - min) + min
 
-const changeIntensity = ({r, g, b}, intensity) => ({ r: intensity * r, g: intensity * g, b: intensity * b })
-const isBusy = id => lights[id].busy
+
+const maxOneRGB = () => [maxRed, maxGreen, maxBlue][rand(2)]
 
 if (globalState.currentGroup === null) {
   globalState.currentGroup = {}
@@ -30,14 +40,22 @@ if (globalState.currentGroup === null) {
 
 const populateLights = () => {
   lights = globalState.currentGroup.lights.reduce((acc, id) => {
-    acc[id] = { id, ...zeroRgb(), busy: false, tones: [], interval: null, busyCount: 0 }
+    acc[id] = { id, ...zeroRgb, busy: false, tones: [], interval: null, busyCount: 0 }
     return acc
   }, {})
 }
 
+const emitLights = () => {
+  const colorMessage = lightLoop().map(id => {
+    const { r, g, b } = lights[id]
+    return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
+  })
+
+  eventHub.emit('emitLight', colorMessage)
+}
+
 const tweenLightTo = (rgb, id, ms = 5000) => {
-  if(isBusy(id)) return
-  console.log(id, 'tweening to ', rgb)
+  // if (isBusy(id)) return
   const currentRgb = getRgbAsString(lights[id])
   const destinationRgb = getRgbAsString(rgb)
   const interpolation = interpolateRgb(currentRgb, destinationRgb)
@@ -48,20 +66,15 @@ const tweenLightTo = (rgb, id, ms = 5000) => {
       const [r, g, b] = getRgbFromCssStr(interpolation(1))
       clearInterval(lights[id].interval)
       Object.assign(lights[id], { r, g, b, busy: false })
-      console.log(lights[id])
     }
 
     i += 20 / ms
     const [r, g, b] = getRgbFromCssStr(interpolation(i))
     Object.assign(lights[id], { r, g, b, busy: true })
   }, 20)
-
 }
 
-const init = () => {
-  populateLights()
-  initRan = true
-}
+
 
 // const colorMap = {
 //   'C': 'rgb(222, 122, 253)',
@@ -94,23 +107,24 @@ const colorMap = {
 }
 
 const getNonBusyLight = () => {
-  const freeLights = Object.keys(lights).filter(key => !lights[key].busy)
+  const freeLights = lightLoop().filter(key => !lights[key].busy)
   return freeLights[rand(freeLights.length - 1)]
 }
 
 
-/* Used for timing how long the fade down should be */ 
-eventHub.on('beat', () => {
-  Object.keys(lights).forEach(key => {
-    // Object.assign(lights[key], changeIntensity(maxBlue, 0.4))      
-  })  
-})
+/* Used for timing how long the fade down should be */
+// eventHub.on('beat', () => {
+//   lightLoop().forEach(key => {
+//     Object.assign(lights[key], changeIntensity(maxBlue, 0.4))      
+//   })  
+// })
 
 
 
 const allMax = () => {
-  Object.keys(lights).forEach(id => {
+  lightLoop().forEach(id => {
     !isBusy(id) && Object.assign(lights[id], changeIntensity(maxRed, 0.8))
+
   })
 }
 
@@ -122,7 +136,7 @@ const getTonesForLight = id => lights[id].tones
 
 const getLightsForTone = tone => {
   let light = null
-  Object.keys(lights).forEach(id => {
+  lightLoop().forEach(id => {
     const tones = getTonesForLight(id)
     if (tones.includes(tone)) {
       light = lights[id]
@@ -132,11 +146,11 @@ const getLightsForTone = tone => {
 }
 
 const withLeastTones = () => {
-  const id = Object.keys(lights).sort((a, b) => lights[a].tones.length - lights[b].tones.length)[0]
+  const id = lightLoop().sort((a, b) => lights[a].tones.length - lights[b].tones.length)[0]
   return { id }
 }
 
-const assignTone = (id, tone) => { 
+const assignTone = (id, tone) => {
   id && lights[id].tones.push(tone)
 }
 
@@ -162,104 +176,71 @@ eventHub.on('segment', ([segment, index]) => {
 })
 
 
-const emitLights = () => {
-  const colorMessage = Object.keys(lights).map(id => {
-    const { r, g, b } = lights[id]
-    return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
-  })
 
-  eventHub.emit('emitLight', colorMessage)
-}
 
 const increaseBusyCount = id => {
   lights[id].busyCount++
-  if(lights[id].busyCount > 20) {
+  if (lights[id].busyCount > 20) {
     lights[id].busyCount = 0
     lights[id].busy = false
   }
 }
 
 const dampenLights = () => {
-  Object.keys(lights).forEach(id => {
-    const { r, g, b, busy } = lights[id]
+  const _lights = getLights()
+  Object.keys(_lights).forEach(id => {
+    const { r, g, b, busy } = _lights[id]
     busy && increaseBusyCount(id)
     !busy && Object.assign(lights[id], changeIntensity({ r, g, b }, 0.9))
   })
 }
 
-setInterval(() => {
-  globalState.hasSocket && emitLights()
-  dampenLights()
-}, 50)
+
+const init = () => {
+  populateLights()
+  initRan = true
+  setInterval(() => {
+    globalState.hasSocket && emitLights()
+    dampenLights()
+  }, 50)
+}
 
 init()
 
+const removeAllBusy = () => {
+  lightLoop().forEach(id => {
+    lights[id].busy = false
+  })
+}
 
 
 
+eventHub.on('letsgo', () => {
+  const infiniteTween = ([dark, next, count = 0, intervalLength = 2000]) => {
+    const randIntensity = getRandomArbitrary(0.5, 0.8)
 
+    lightLoop().forEach(id => {
+      dark
+        ? tweenLightTo(changeIntensity(next ? maxRed : maxPurple, randIntensity), id, intervalLength)
+        : tweenLightTo(changeIntensity(!next ? changeIntensity(maxRed, 0.5) : changeIntensity(maxPurple, 0.5), randIntensity), id, intervalLength)
+    })
 
+    setTimeout(() => {
+      if (count > 3) {
+        intervalLength -= 50
+        if (intervalLength < 0) {
+          intervalLength = 50
+        }
+        count = 0
+      }
 
+      const nextTween = dark
+        ? [!dark, !next, count + 1, intervalLength]
+        : [!dark, next, count, intervalLength]
 
+      infiniteTween(nextTween)
+    }, intervalLength + 200)
+  }
 
-
-
-
-
-
-
-
-
-/* ATTEMPT TO GROUP THE ATTACKS INTO DIFFERENT GROUPS AND MAKE INTENSITY BASED ON THE ATTACK OF THE SOUND */ 
-// const intensity = groupAttack(loudness_max * loudness_max_time)
-// Object.assign(lights[id], withIntensity({ r, g, b }, intensity))
-
-// const attackRanges = []
-// //TODO, TRY LIGHTS WITH THE INTENSITY BEING THE GROUP, THE LESSER GROUP THE MORE INTENSE ? 
-// const sortedRanges = []
-
-// const isInBetween = (top, low, value) => value > low && value < top
-
-// const placeAttack = number => {
-//   for (let i = 0; i < sortedRanges.length; i++) {
-//     const [lowTop] = sortedRanges[i]
-//     const { low, top } = lowTop
-//     if(isInBetween(low, top, number)) {
-//       console.log(i)
-//       break
-//     }
-//   }
-
-//   for (let i = 0; i < sortedRanges.length; i++) {
-//     const [lowTop] = sortedRanges[i]
-//     const { low, top } = lowTop
-//     if(isInBetween(low, top, number)) {
-//       sortedRanges[i][1].push(number)
-//       return i
-//     }
-//   }
-// }
-
-// const groupAttack = number => {
-//   attackRanges.push(number)
-//   const ranges = Object.keys(lights).length
-//   if(attackRanges.length === 40) {
-//     const max = Math.min(...attackRanges)
-
-//     const oneRange = max/ranges
-
-//     for (let i = 1; i < ranges + 1; i++) {
-//       const low = oneRange * i
-//       const top = oneRange * 2 * i
-//       const rangeCondition = { low, top }
-//       sortedRanges.push([ rangeCondition, [] ])
-//     }
-//   }
-
-//   if(sortedRanges.length) {
-//     const intensity = 1 - placeAttack(number)/ranges
-//     return intensity
-//   }
-// }
-
-// const withIntensity = ({r, g, b}, intensity) => ({ r: intensity * r, g: intensity * g, b: intensity * b })
+  infiniteTween([false, true])
+})

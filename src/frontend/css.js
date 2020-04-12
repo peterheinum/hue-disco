@@ -7,7 +7,7 @@ export const button = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  margin: '4px'
+  margin: 4 + 'px'
 }
 
 export const wide_button = {
@@ -30,6 +30,11 @@ export const full_size = {
 
 export const full_width = {
   width: 100 + '%'
+}
+
+export const half_size = {
+  height: 50 + '%',
+  width: 50 + '%',
 }
 
 export const flex_center = {
@@ -71,4 +76,11 @@ export const menu_button_position = {
   left: 30 + 'px',
   zIndex: 999,
   color: 'whitesmoke'
+}
+
+export const grid_container = {
+  'display': 'grid',
+  'gridTemplateColumns': 'auto auto auto auto',
+  'backgroundColor': '#2196F3',
+  'padding': 10 + 'px'
 }

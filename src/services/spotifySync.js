@@ -364,7 +364,7 @@ const quickStart = () => {
   }
 }
 
-eventHub.on('quickStart', () => {
+eventHub.on('quickStart', extraEvent => {
   const { getGroups } = require('../services/groupHandler')
   const { startStream, getGroupsAndStopStreams } = require('../services/socket')
   const globalState = require('../utils/globalState')
@@ -377,8 +377,14 @@ eventHub.on('quickStart', () => {
     getGroupsAndStopStreams()
       .then(startStream)
       .then(() => require('./lights'))
+      .then(() => extraEvent && eventHub.emit('letsgo'))
   })
 })
 
+const initie = () => {
+  eventHub.emit('quickStart', true)
+
+}
 
 quickStart()
+initie()

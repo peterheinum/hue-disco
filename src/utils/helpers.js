@@ -74,6 +74,7 @@ module.exports = {
   get,
   flat,
   rand,
+  round,
   sleep,
   request,
   isEqual, 
