@@ -54,7 +54,7 @@ const configurateVariables = () => {
 
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
-    const { r, g, b } = lights[id]
+    const { r, g, b } = changeIntensity(lights[id], 0.7)
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
 
