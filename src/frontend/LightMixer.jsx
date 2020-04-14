@@ -59,7 +59,7 @@ export default () => {
   }
 
   return (
-    <div style={{ ...full_size, ...flex_center, ...flex_column }}>
+    <div style={{ ...full_size, ...flex_center, ...flex_column }} onClick={() => setPicking('')}>
       {picking && <SketchPicker color={colors[picking]} onChange={handleChange} />}
       <div style={grid_container}>
         {Object.keys(colors).map((tone, index) =>

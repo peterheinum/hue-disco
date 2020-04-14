@@ -57,8 +57,8 @@ router.get('/sync/current/:id', async (req, res) => {
 router.post('/editGroup', async (req, res) => {
   const { group } = req.body
   const { id, lights } = group
-  const response = await editGroup(id, lights)
-  res.send(response)
+  editGroup(id, lights)
+    .then(res.send)
 })
 
 router.post('/flashLight/', async (req, res) => {
@@ -85,10 +85,11 @@ router.post('/flashLight/', async (req, res) => {
 
 
 
-router.get('/setColors', (req, res) => {
+router.post('/setColors', (req, res) => {
   const { colors } = req.body
   console.log(colors)
   eventHub.emit('newColors', colors)
+  res.send(colors)
 })
 
 

@@ -350,7 +350,7 @@ eventHub.on('authRecieved', recievedAuth => {
 })
 
 //UTILITIES MADE FOR FASTER DEVELOPMENT
-const quickStart = () => {
+const quickStartIfPossible = extraEvent => {
   const filePath = path.resolve(`${__dirname}/../utils/spotifyAuth`)
   const json = fs.readFileSync(filePath)
   if (!json.toString()) return
@@ -360,7 +360,7 @@ const quickStart = () => {
   if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    eventHub.emit('quickStart')
+    eventHub.emit('quickStart', extraEvent)
   }
 }
 
@@ -381,10 +381,4 @@ eventHub.on('quickStart', extraEvent => {
   })
 })
 
-const initie = () => {
-  eventHub.emit('quickStart', true)
-
-}
-
-quickStart()
-initie()
+quickStartIfPossible()
