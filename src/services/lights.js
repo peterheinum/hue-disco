@@ -18,7 +18,8 @@ const isBusy = id => lights[id].busy
 const state = {
   lights: {},
   initRan: false,
-  isIntro: true
+  isIntro: false,
+  mode: 0
 }
 
 let lights = {}
@@ -54,7 +55,7 @@ const configurateVariables = () => {
 
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
-    const { r, g, b } = changeIntensity(lights[id], 0.7)
+    const { r, g, b } = changeIntensity(lights[id], 0.05)
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
 
@@ -175,9 +176,12 @@ const assignTone = (id, tone) => {
 
 
 const dampenLights = () => {
+  const { move } = state
+  if (move === 1) return
   const _lights = getLights()
+
   Object.keys(_lights).forEach(id => {
-    const { r, g, b, busy } =  _lights[id]
+    const { r, g, b, busy } = _lights[id]
     busy && console.log('busy', id)
     !busy && Object.assign(lights[id], changeIntensity({ r, g, b }, 0.9))
   })
@@ -190,7 +194,7 @@ const init = () => {
   setInterval(() => {
     globalState.hasSocket && emitLights()
     dampenLights()
-  }, 50)
+  }, 70)
 }
 
 init()
@@ -242,8 +246,8 @@ eventHub.on('segment', ([segment, index]) => {
 /* Used for timing how long the fade down should be */
 eventHub.on('beat', ([beat, index]) => {
   lightLoop().forEach(id => {
-    Object.assign(lights[id], changeIntensity(getRgb(lights[id]), 1.3))      
-  })  
+    Object.assign(lights[id], changeIntensity(getRgb(lights[id]), 1.3))
+  })
 })
 
 
@@ -254,44 +258,50 @@ eventHub.on('bar', () => {
 })
 
 eventHub.on('section', ([section, index]) => {
-  if(index < 2) {
+  if (index < 2) {
     set(state, 'isIntro', true)
   }
+
   else {
     set(state, 'isIntro', false)
+    const { mode } = state
+    mode === 1
+      ? set(state, 'mode', 0)
+      : set(state, 'mode', 1)
   }
-  console.log({section})
+
+  console.log({ section })
 })
 
 
 
 eventHub.on('letsgo', () => {
-  // heartBeat(3)
-  // infiniteTween([false, true])
+  set(state, 'mode', 1)
+  infiniteTween([false, true])
 })
 
-// const infiniteTween = ([dark, next, count = 0, intervalLength = 2000]) => {
-//   const randIntensity = getRandomArbitrary(0.5, 0.8)
+const infiniteTween = ([dark, next, intervalLength = 300]) => {
+  const orange = { r: 255, g: 165, b: 0 }
 
-//   lightLoop().forEach(id => {
-//     dark
-//       ? tweenLightTo(changeIntensity(next ? maxRed : maxPurple, randIntensity), id, intervalLength)
-//       : tweenLightTo(changeIntensity(!next ? changeIntensity(maxRed, 0.5) : changeIntensity(maxPurple, 0.5), randIntensity), id, intervalLength)
-//   })
+  const currentTween = dark
+  ? changeIntensity(orange, 0.5)
+  : changeIntensity(maxRed, 0.5)
 
-//   setTimeout(() => {
-//     if (count > 3) {
-//       intervalLength -= 50
-//       if (intervalLength < 0) {
-//         intervalLength = 50
-//       }
-//       count = 0
-//     }
+  // const currentTween = dark
+  //   ? changeIntensity(next ? maxRed : maxPurple, randIntensity)
+  //   : !next
+  //     ? changeIntensity(maxRed, 0.5)
+  //     : changeIntensity(maxPurple, 0.5)
 
-//     const nextTween = dark
-//       ? [!dark, !next, count + 1, intervalLength]
-//       : [!dark, next, count, intervalLength]
+  lightLoop().forEach(id => {
+    tweenLightTo(currentTween, id, intervalLength)
+  })
 
-//     infiniteTween(nextTween)
-//   }, intervalLength + 200)
-// }
+  setTimeout(() => {
+    const nextTween = dark
+      ? [!dark, !next]
+      : [!dark, next]
+
+    infiniteTween(nextTween)
+  }, intervalLength + 500)
+}

@@ -174,6 +174,7 @@ const reset = data => {
 }
 
 const getCurrentlyPlaying = () => {
+  console.log('get currently playing')
   if (!authIsValid()) {
     console.log('Auth invalid needs new auth')
     return Promise.reject({ error: 'expired-auth' })
@@ -322,8 +323,9 @@ function millisToMinutesAndSeconds(millis) {
 
 
 const sync = () => {
+  console.log('syncing')
   getCurrentlyPlaying()
-    .then(checkIfNewSong)
+  .then(checkIfNewSong)
     .then(reset)
     .then(extractMetaData)
     .then(getSongVibe)
@@ -337,6 +339,7 @@ const sync = () => {
 
 
 eventHub.on('startPingInterval', () => {
+  console.log('syncing')
   if (authIsValid()) {
     pingInterval = setInterval(() => sync(), 5000)
   }
@@ -353,14 +356,15 @@ eventHub.on('authRecieved', recievedAuth => {
 //UTILITIES MADE FOR FASTER DEVELOPMENT
 const quickStart = () => {
   const filePath = path.resolve(`${__dirname}/../utils/spotifyAuth`)
-  if (fs.existsSync(filePath)) {
-    const json = fs.readFileSync(filePath)
-    const { auth: _auth, timestamp } = JSON.parse(json)
-    if (Date.now() - timestamp < 3600000) {
-      Object.assign(auth, { ..._auth, timestamp })
-      eventHub.emit('startPingInterval')
-      eventHub.emit('quickStart')
-    }
+  const json = fs.readFileSync(filePath)
+  if (!json.toString()) return
+
+  const { auth: _auth, timestamp } = JSON.parse(json) ? {} : JSON.parse(json)
+  if (!timestamp) return
+  if (Date.now() - timestamp < 3600000) {
+    Object.assign(auth, { ..._auth, timestamp })
+    eventHub.emit('startPingInterval')
+    eventHub.emit('quickStart')
   }
 }
 
@@ -387,4 +391,4 @@ const initie = () => {
 }
 
 quickStart()
-// initie()
+initie()
