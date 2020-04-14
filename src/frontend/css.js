@@ -73,14 +73,16 @@ export const circle = {
 export const menu_button_position = {
   position: 'absolute',
   top: 30 + 'px',
-  left: 30 + 'px',
+  left: 10 + 'px',
   zIndex: 999,
   color: 'whitesmoke'
 }
 
 export const grid_container = {
-  'display': 'grid',
-  'gridTemplateColumns': 'auto auto auto auto',
-  'backgroundColor': '#2196F3',
-  'padding': 10 + 'px'
+  display: 'grid',
+  width: 120+ 'px',
+  gridTemplateColumns: '1fr 1fr 1fr 1fr',
+  gridTemplateRows: 'auto',
+  gridGap: 4 + 'px',
+  padding: 10 + 'px'
 }

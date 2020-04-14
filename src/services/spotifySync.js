@@ -323,7 +323,6 @@ function millisToMinutesAndSeconds(millis) {
 
 
 const sync = () => {
-  console.log('syncing')
   getCurrentlyPlaying()
   .then(checkIfNewSong)
     .then(reset)
@@ -336,10 +335,7 @@ const sync = () => {
     .catch(handleSyncErrors)
 }
 
-
-
 eventHub.on('startPingInterval', () => {
-  console.log('syncing')
   if (authIsValid()) {
     pingInterval = setInterval(() => sync(), 5000)
   }
@@ -359,7 +355,7 @@ const quickStart = () => {
   const json = fs.readFileSync(filePath)
   if (!json.toString()) return
 
-  const { auth: _auth, timestamp } = JSON.parse(json) ? {} : JSON.parse(json)
+  const { auth: _auth, timestamp } = JSON.parse(json) ? JSON.parse(json) : {}
   if (!timestamp) return
   if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, { ..._auth, timestamp })

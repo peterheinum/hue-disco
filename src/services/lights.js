@@ -19,7 +19,8 @@ const state = {
   lights: {},
   initRan: false,
   isIntro: false,
-  mode: 0
+  mode: 0,
+  colorMap: {}
 }
 
 let lights = {}
@@ -27,6 +28,7 @@ let initRan = false
 
 const getLights = () => Object.assign({}, lights)
 const lightLoop = () => Object.keys(getLights())
+const getColorsForTone = tone => path(['colorMap', tone], state)
 
 /* Sweet variables */
 const zeroRgb = { r: 0, g: 0, b: 0 }
@@ -40,73 +42,6 @@ const halfRed = { r: 50, g: 0, b: 0 }
 const getRandomArbitrary = (min, max) => Math.random() * (max - min) + min
 
 const maxOneRGB = () => [maxRed, maxGreen, maxBlue][rand(2)]
-
-if (globalState.currentGroup === null) {
-  globalState.currentGroup = {}
-  globalState.currentGroup.lights = ['1', '2', '3', '4', '5', '6']
-}
-
-const configurateVariables = () => {
-  lights = path(['currentGroup', 'lights'], globalState).reduce((acc, id) => {
-    acc[id] = { id, ...zeroRgb, busy: false, tones: [], interval: null, busyCount: 0 }
-    return acc
-  }, {})
-}
-
-const emitLights = () => {
-  const colorMessage = lightLoop().map(id => {
-    const { r, g, b } = changeIntensity(lights[id], 0.05)
-    return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
-  })
-
-  eventHub.emit('emitLight', colorMessage)
-}
-
-
-
-const tweenLightTo = (rgb, id, ms = 5000) => {
-  // console.log('twening', id, 'to ', rgb, 'from ', getRgb(lights[id]))
-  console.log(id)
-  console.log(getRgb(lights[id]))
-  const currentRgb = getRgbAsString(lights[id])
-  const destinationRgb = getRgbAsString(rgb)
-  const interpolation = interpolateRgb(currentRgb, destinationRgb)
-
-  let i = 0
-  return new Promise((resolve, reject) => {
-    const _interval = setInterval(() => {
-      if (i > 0.99) {
-        const [r, g, b] = getRgbFromCssStr(interpolation(1))
-        Object.assign(lights[id], { r, g, b, busy: false })
-        clearInterval(_interval)
-        resolve()
-      }
-
-      i += 20 / ms
-      console.log('tweeeening')
-      const [r, g, b] = getRgbFromCssStr(interpolation(i))
-      Object.assign(lights[id], { r, g, b, busy: true })
-    }, 20)
-  })
-}
-
-
-
-
-// const colorMap = {
-//   'C': 'rgb(222, 122, 253)',
-//   'C#': 'rgb(159, 54, 191)',
-//   'D': 'rgb(88, 247, 221)',
-//   'D#': 'rgb(29, 169, 146)',
-//   'E': 'rgb(245, 178, 77)',
-//   'F': 'rgb(10, 101, 220)',
-//   'F#': 'rgb(10, 50, 255)',
-//   'G': 'rgb(50, 255, 10)',
-//   'G#': 'rgb(30, 230, 20)',
-//   'A': 'rgb(90, 180, 190)',
-//   'A#': 'rgb(90, 230, 150)',
-//   'B': 'rgb(254, 2, 50)'
-// }
 
 const colorMap = {
   'C': 'rgb(255, 113, 206)',
@@ -122,6 +57,62 @@ const colorMap = {
   'A#': 'rgb(1, 205, 254)',
   'B': 'rgb(255, 113, 206)'
 }
+
+eventHub.on('setColors', colorMap => {
+  Object.assign(state.colorMap, colorMap)
+})
+
+if (globalState.currentGroup === null) {
+  globalState.currentGroup = {}
+  globalState.currentGroup.lights = ['1', '2', '3', '4', '5', '6']
+}
+
+const configurateVariables = () => {
+  lights = path(['currentGroup', 'lights'], globalState).reduce((acc, id) => {
+    acc[id] = { id, ...zeroRgb, busy: false, tones: [], interval: null, busyCount: 0 }
+    return acc
+  }, {})
+  
+  Object.assign(state.colorMap, colorMap)
+}
+
+const emitLights = () => {
+  const colorMessage = lightLoop().map(id => {
+    const { r, g, b } = changeIntensity(lights[id], 0.7)
+    return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
+  })
+
+  eventHub.emit('emitLight', colorMessage)
+}
+
+
+
+const tweenLightTo = (rgb, id, ms = 5000) => {
+  // console.log('twening', id, 'to ', rgb, 'from ', getRgb(lights[id]))
+  const currentRgb = getRgbAsString(lights[id])
+  const destinationRgb = getRgbAsString(rgb)
+  const interpolation = interpolateRgb(currentRgb, destinationRgb)
+
+  let i = 0
+  return new Promise((resolve, reject) => {
+    const _interval = setInterval(() => {
+      if (i > 0.99) {
+        const [r, g, b] = getRgbFromCssStr(interpolation(1))
+        Object.assign(lights[id], { r, g, b, busy: false })
+        clearInterval(_interval)
+        resolve()
+      }
+
+      i += 20 / ms
+      const [r, g, b] = getRgbFromCssStr(interpolation(i))
+      Object.assign(lights[id], { r, g, b, busy: true })
+    }, 20)
+  })
+}
+
+
+
+
 
 const getNonBusyLight = () => {
   const freeLights = lightLoop().filter(({ busy }) => !busy)
@@ -176,13 +167,13 @@ const assignTone = (id, tone) => {
 
 
 const dampenLights = () => {
-  const { move } = state
-  if (move === 1) return
+  const { mode } = state
+  if (mode === 1) return
   const _lights = getLights()
 
   Object.keys(_lights).forEach(id => {
     const { r, g, b, busy } = _lights[id]
-    busy && console.log('busy', id)
+    // busy && console.log('busy', id)
     !busy && Object.assign(lights[id], changeIntensity({ r, g, b }, 0.9))
   })
 }
@@ -229,7 +220,7 @@ eventHub.on('segment', ([segment, index]) => {
 
   const { pitches, duration, loudness_start, loudness_max, loudness_max_time } = segment
   const tone = convertPitchToNote(pitches)
-  const [r, g, b] = getRgbFromCssStr(colorMap[tone])
+  const [r, g, b] = getRgbFromCssStr(getColorsForTone(tone))
   const { id } = getLightsForTone(tone) || withLeastTones()
   !getLightsForTone(tone) && assignTone(id, tone)
 
@@ -276,22 +267,16 @@ eventHub.on('section', ([section, index]) => {
 
 
 eventHub.on('letsgo', () => {
-  set(state, 'mode', 1)
-  infiniteTween([false, true])
+  // set(state, 'mode', 1)
+  // infiniteTween([false, true])
 })
 
-const infiniteTween = ([dark, next, intervalLength = 300]) => {
+const infiniteTween = ([dark, next, intervalLength = 500]) => {
   const orange = { r: 255, g: 165, b: 0 }
 
   const currentTween = dark
-  ? changeIntensity(orange, 0.5)
-  : changeIntensity(maxRed, 0.5)
-
-  // const currentTween = dark
-  //   ? changeIntensity(next ? maxRed : maxPurple, randIntensity)
-  //   : !next
-  //     ? changeIntensity(maxRed, 0.5)
-  //     : changeIntensity(maxPurple, 0.5)
+    ? changeIntensity(orange, 0.5)
+    : changeIntensity(maxRed, 0.5)
 
   lightLoop().forEach(id => {
     tweenLightTo(currentTween, id, intervalLength)

@@ -83,6 +83,15 @@ router.post('/flashLight/', async (req, res) => {
   }
 })
 
+
+
+router.get('/setColors', (req, res) => {
+  const { colors } = req.body
+  console.log(colors)
+  eventHub.emit('newColors', colors)
+})
+
+
 router.get('/testFunction', () => {
   eventHub.emit('quickStart')
 })

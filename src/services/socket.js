@@ -92,7 +92,7 @@ const connectToSocket = () => {
       eventHub.on('emitLight', lights => {
         const message = formatSocketMessage(lights)
 
-        socket && socket.send(message)
+        state.hasSocket && socket.send(message)
       })
     })
     .on('error', e => {
@@ -100,7 +100,7 @@ const connectToSocket = () => {
       console.log('ERROR', e)
       setTimeout(() => {
         restart()
-      }, 30000)
+      }, 40000)
     })
     .on('close', e => {
       state.hasSocket = false

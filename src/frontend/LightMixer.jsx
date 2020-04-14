@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import { throttle } from 'lodash' 
 import { SketchPicker } from 'react-color'
+import axios from 'axios'
 import {
   full_size,
   half_size,
@@ -34,18 +36,37 @@ const colorMap = {
   'B': 'rgb(0, 0, 0)'
 }
 
+const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
+
 export default () => {
-  const [colors, setColors] = useState()
-  const [color, setColor] = useState('#000000')
+  const [colors, setColors] = useState(colorMap)
+  const [picking, setPicking] = useState('')
+
+  const handler = ({ rgb }) => {
+    const cssRBG = getRgbAsString(rgb)
+    setColors({ ...colors, [picking]: cssRBG })
+  }
+
+  const handleChange = throttle(handler, 50)
+
+  const saveSetup = () => {
+    localStorage.getItem('savedSetups')
+      ? localStorage.setItem('savedSetups', JSON.stringify([colors, ...JSON.parse(localStorage.getItem('savedSetups'))]))
+      : localStorage.setItem('savedSetups', JSON.stringify([colors]))
+    axios.post('/api/setColors', { colors })
+      .then(console.log)
+      .catch(console.error)    
+  }
 
   return (
-    <div style={{ ...full_size, ...flex_center }}>
-      {/* <SketchPicker color={color} onChange={setColor} /> */}
-      <div style={ grid_container }>
-        {Object.keys(colorMap).map((tone, index) =>
-           <div style={{ backgroundColor: colorMap[tone], ...circle}}> {tone} </div>
+    <div style={{ ...full_size, ...flex_center, ...flex_column }}>
+      {picking && <SketchPicker color={colors[picking]} onChange={handleChange} />}
+      <div style={grid_container}>
+        {Object.keys(colors).map((tone, index) =>
+          <div style={{ backgroundColor: colors[tone], ...circle }} onClick={() => setPicking(tone)}> {tone} </div>
         )}
       </div>
+      <div style={{...button, ...createButtonStyle, backgroundColor: btnOriginalColor}} onClick={saveSetup} />
     </div>
   )
 }
