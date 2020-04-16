@@ -5,14 +5,6 @@ const { eventHub } = require('../utils/eventHub')
 const { get, set } = require('lodash')
 const convertPitchToNote = require('../utils/convertPitchToNote')
 
-/* UTILS */
-const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
-const roundRgb = ({ r, g, b }) => ({ r: round(r), g: round(g), b: round(b) })
-const getRgb = ({ r, g, b }) => ({ r, g, b })
-const changeIntensity = ({ r, g, b }, intensity) => roundRgb({ r: intensity * r, g: intensity * g, b: intensity * b })
-const isBusy = id => getLight(id).busy
-
-
 /* State */
 const state = {
   lights: {},
@@ -20,7 +12,19 @@ const state = {
   colorMap: {}
 }
 
-let lights = {}
+
+/* UTILS */
+const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
+
+const roundRgb = ({ r, g, b }) => ({ r: round(r), g: round(g), b: round(b) })
+
+const getRgb = ({ r, g, b }) => ({ r, g, b })
+
+const changeIntensity = ({ r, g, b }, intensity) => roundRgb({ r: intensity * r, g: intensity * g, b: intensity * b })
+
+const isBusy = id => getLight(id).busy
+
+const removeBusy = () => lightLoop().forEach(id => setLight(id, { r, g, b, busy: false }))
 
 const setLight = (id, value) => {
   !getLight(id)
@@ -29,8 +33,11 @@ const setLight = (id, value) => {
 }
 
 const getLight = id => get(state, `lights.${id}`)
+
 const getLights = () => get(state, 'lights')
+
 const lightLoop = () => Object.keys(get(state, 'lights'))
+
 const getColorsForTone = tone => get(state, `colorMap.${tone}`)
 
 /* Color variables */
@@ -76,7 +83,6 @@ const configurateVariables = () => {
     setLight(id, { id, ...zeroRgb, busy: false, tones: [], interval: null, busyCount: 0 })
   })
 
-
   Object.assign(state.colorMap, colorMap)
   shuffle(Object.keys(colorMap)).forEach(tone => {
     const { id } = withLeastTones()
@@ -93,10 +99,7 @@ const emitLights = () => {
   eventHub.emit('emitLight', colorMessage)
 }
 
-
-
 const tweenLightTo = (rgb, id, ms = 5000) => {
-  // console.log('twening', id, 'to ', rgb, 'from ', getRgb(lights[id]))
   const currentRgb = getRgbAsString(getLight(id))
   const destinationRgb = getRgbAsString(rgb)
   const interpolation = interpolateRgb(currentRgb, destinationRgb)
@@ -106,7 +109,6 @@ const tweenLightTo = (rgb, id, ms = 5000) => {
     const _interval = setInterval(() => {
       if (i > 0.99) {
         const [r, g, b] = getRgbFromCssStr(interpolation(1))
-        // Object.assign(lights[id], { r, g, b, busy: false })
         setLight(id, { r, g, b, busy: false })
         clearInterval(_interval)
         resolve()
@@ -115,7 +117,6 @@ const tweenLightTo = (rgb, id, ms = 5000) => {
       i += 20 / ms
       const [r, g, b] = getRgbFromCssStr(interpolation(i))
       setLight(id, { r, g, b, busy: true })
-      // Object.assign(lights[id], { r, g, b, busy: true })
     }, 20)
   })
 }
@@ -126,9 +127,7 @@ const heartBeatAll = () => {
   })
 }
 
-const removeBusy = () => {
-  lightLoop().forEach(id => setLight(id, { r, g, b, busy: false }))
-}
+
 
 const getTonesForLight = id => getLight(id).tones
 
@@ -149,11 +148,8 @@ const withLeastTones = () => {
 }
 
 const assignTone = (id, tone) => {
-  setLight(id, { tones: [...getLight(id).tones ,tone]})
+  setLight(id, { tones: [...getLight(id).tones, tone]})
 }
-
-
-
 
 const dampenLights = () => {
   const { mode } = state
@@ -170,7 +166,7 @@ const dampenLights = () => {
 const init = () => {
   const freshState = {
     lights: {},
-    mode: '',
+    mode: 'slow-intro',
     colorMap: {}
   }
   Object.assign(state, freshState)
@@ -182,7 +178,7 @@ const init = () => {
   }, 70)
 }
 
-init()
+
 
 const stackFunctions = async stack => {
   for (let i = 0; i < stack.length; i++) {
@@ -194,7 +190,7 @@ const stackFunctions = async stack => {
 
 const transfer = (from, to, ms = 500) => {
   tweenLightTo(zeroRgb, from, ms)
-  tweenLightTo(getRgb(lights[from]), to, ms)
+  tweenLightTo(getRgb(getLight(from)), to, ms)
 }
 
 const heartBeat = id => {
@@ -220,18 +216,19 @@ eventHub.on('segment', ([segment, index]) => {
   if (globalState.hasSocket && !isBusy(id)) {
     duration > 1000
       ? tweenLightTo({ r, g, b }, id, duration)
-      // : Object.assign(lights[id], { r, g, b })
       : setLight(id, { r, g, b })
   }
 })
 
 eventHub.on('bar', ([bar, index, distanceToNext]) => {
   const { mode } = state
-
-  if (mode === 'slowIntro') {
+  console.log(mode)
+  if (mode === 'slow-intro') {
+    console.log(index % 2 == 0)
+    const temp = index % 2 == 0 ? 0 : 1
     index % 2 == 0
-      ? lightLoop().forEach(id => tweenLightTo(id % 2 === 0 ? zeroRgb : maxRed, id, distanceToNext))
-      : lightLoop().forEach(id => tweenLightTo(id % 2 !== 0 ? zeroRgb : maxRed, id, distanceToNext))
+      ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : maxRed, id, distanceToNext))
+      : lightLoop().forEach(id => tweenLightTo(id % 2 !== temp ? maxRed : zeroRgb, id, distanceToNext))
   }
 
   if (mode === 'heartbeat') {
@@ -241,10 +238,16 @@ eventHub.on('bar', ([bar, index, distanceToNext]) => {
 
 eventHub.on('section', ([section, index]) => {
   const { mode } = state
-  mode === 'no-dampen'
-    ? set(state, 'mode', 'no-dampen')
-    : set(state, 'mode', 'flashes')
+  // mode === 'no-dampen'
+  //   ? set(state, 'mode', 'no-dampen')
+  //   : set(state, 'mode', 'flashes')
 })
+
+
+
+
+eventHub.on('newSong', init)
+init()
 
 
 

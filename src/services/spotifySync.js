@@ -2,12 +2,18 @@ require('dotenv').config({ path: __dirname + '../../.env' })
 const axios = require('axios')
 const fs = require('fs')
 const path = require('path')
-
 const { get } = require('lodash')
+
 const { eventHub } = require('../utils/eventHub')
 const { isEqual } = require('../utils/helpers')
+const getNewToken = require('../auth/getNewToken')
 
-const { track, resetSongContext, lastIndex, activeInterval } = require('../utils/track')
+const {
+  track,
+  resetSongContext,
+  lastIndex,
+  activeInterval
+} = require('../utils/track')
 
 const auth = {
   access_token: '',
@@ -50,7 +56,7 @@ const authIsValid = () => {
   const { timestamp } = auth
   return timestamp === 0
     ? false
-    : Date.now() - timestamp < 3600000
+    : Date.now() - timestamp < 3500000
 }
 
 const checkIfNewSong = data => {
@@ -66,6 +72,7 @@ const checkIfNewSong = data => {
 
 const reset = data => {
   resetVariables()
+  eventHub.emit('newSong')
   return data
 }
 
@@ -164,16 +171,16 @@ const formatIntervals = () => {
       if (interval.loudness_max_time) {
         interval.loudness_max_time = interval.loudness_max_time * 1000
       }
-     
+
       interval.start = interval.start * 1000
       interval.duration = interval.duration * 1000
     })
   })
 }
 
-const toPositive = negativeNum => negativeNum - (negativeNum*2)
+const toPositive = negativeNum => negativeNum - (negativeNum * 2)
 
-const distanceToNext = (index, nextIndex, type) => track[type][nextIndex] && toPositive(track[type][index].start - track[type][nextIndex].start) 
+const distanceToNext = (index, nextIndex, type) => track[type][nextIndex] && toPositive(track[type][index].start - track[type][nextIndex].start)
 
 const setActiveInterval = () => {
   const determineInterval = (type) => {
@@ -190,7 +197,7 @@ const setActiveInterval = () => {
     if (!isEqual(track[type][index], activeInterval[type]) && lastIndex[type] < index) {
       activeInterval[type] = track[type][index]
       lastIndex[type] = index
-      eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index+1, type)])
+      eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index + 1, type)])
     }
   })
 }
@@ -204,13 +211,20 @@ const startSongSync = () => {
     setActiveInterval()
   }, 10)
 }
-const handleSyncErrors = error => {
+
+const handleExpiredAuth = () => {
+  clearInterval(pingInterval)
+  getNewToken()
+}
+
+const handleSyncErrors = ({ error }) => {
+  error === 'expired-auth' && handleExpiredAuth()
   console.log(error)
 }
 
 const sync = () => {
   getCurrentlyPlaying()
-  .then(checkIfNewSong)
+    .then(checkIfNewSong)
     .then(reset)
     .then(extractMetaData)
     .then(getSongVibe)
@@ -232,13 +246,7 @@ eventHub.on('authRecieved', recievedAuth => {
   Object.assign(auth, { ...recievedAuth, timestamp })
   fs.writeFileSync(path.resolve(`${__dirname}/../utils/spotifyAuth`), JSON.stringify({ auth, timestamp }))
   eventHub.emit('startPingInterval')
-  eventHub.emit('quickStart')
 })
-
-
-
-
-
 
 //UTILITIES MADE FOR FASTER DEVELOPMENT
 const quickStartIfPossible = extraEvent => {
@@ -251,7 +259,7 @@ const quickStartIfPossible = extraEvent => {
   if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    eventHub.emit('quickStart', extraEvent)
+    // eventHub.emit('quickStart', extraEvent)
   }
 }
 
@@ -264,7 +272,7 @@ eventHub.on('quickStart', extraEvent => {
   getGroups().then(groups => {
 
     globalState.currentGroup = groups[1]
-    
+
     getGroupsAndStopStreams()
       .then(startStream)
       .then(() => require('./lights'))
