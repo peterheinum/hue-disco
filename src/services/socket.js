@@ -33,8 +33,8 @@ const restart = () => getGroupsAndStopStreams().then(() => startStream())
 let i = 0
 const startStream = () => {
   i++
-  console.log('unsafeStartStream has been called ', i)
-  console.log('connecting to: ', state.currentGroup.id)
+  console.log('StartStream has been called ', i)
+  console.log('connecting to group: ', state.currentGroup.id)
   axios.put(`${baseGroupUrl}/${state.currentGroup.id}`, { stream: { active: true } })
     .then(connectToSocket)
     .catch(restart)
@@ -51,7 +51,6 @@ const getSocket = () => {
     timeout: 1000
   }
 
-  options.psk[hueUserName] = hueClientKey
   delete require.cache[require.resolve('node-dtls-client')]
   const dtls = require('node-dtls-client').dtls
 

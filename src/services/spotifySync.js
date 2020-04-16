@@ -7,6 +7,8 @@ const { get } = require('lodash')
 const { eventHub } = require('../utils/eventHub')
 const { isEqual } = require('../utils/helpers')
 
+const { track, resetSongContext, lastIndex, activeInterval } = require('../utils/track')
+
 const auth = {
   access_token: '',
   refresh_token: '',
@@ -24,60 +26,7 @@ const headers = () => ({
 let syncInterval
 let pingInterval
 
-const track = {
-  //Meta data
-  id: '',
-  artist: {},
-  album: {},
-  meta: {},
-
-  //Time & Sync
-  tick: 0,
-  tock: 0,
-  initial_track_progress: 0,
-  progress_ms: 0,
-  duration_ms: 0,
-  is_playing: false,
-  duration_ms: 0,
-  current_sync_id: '',
-
-  //Vibe
-  danceability: 0,
-  energy: 0,
-  key: 0,
-  loudness: 0,
-  mode: 0,
-  speechiness: 0,
-  acousticness: 0,
-  instrumentalness: 0,
-  liveness: 0,
-  tempo: 0,
-
-  //Analytics
-  bars: [],
-  beats: [],
-  tatums: [],
-  sections: [],
-  segments: [],
-}
-
 const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
-
-const activeInterval = {
-  bars: {},
-  beats: {},
-  tatums: {},
-  sections: {},
-  segments: {},
-}
-
-const lastIndex = {
-  bars: 0,
-  beats: 0,
-  tatums: 0,
-  sections: 0,
-  segments: 0
-}
 
 let syncTime = 0
 eventHub.on('addSyncTime', () => {
@@ -88,62 +37,10 @@ eventHub.on('removeSyncTime', () => {
   syncTime -= 50
 })
 
-
-
 const resetVariables = () => {
+  console.log(track)
   clearInterval(syncInterval)
-  Object.assign(activeInterval, {
-    bars: {},
-    beats: {},
-    tatums: {},
-    sections: {},
-    segments: {},
-  })
-
-  Object.assign(lastIndex, {
-    bars: 0,
-    beats: 0,
-    tatums: 0,
-    sections: 0,
-    segments: 0
-  })
-
-  Object.assign(track, {
-    //Meta data
-    id: '',
-    artist: {},
-    album: {},
-    meta: {},
-
-    //Time & Sync
-    tick: 0,
-    tock: 0,
-    initial_track_progress: 0,
-    progress_ms: 0,
-    duration_ms: 0,
-    is_playing: false,
-    duration_ms: 0,
-    current_sync_id: '',
-
-    //Vibe
-    danceability: 0,
-    energy: 0,
-    key: 0,
-    loudness: 0,
-    mode: 0,
-    speechiness: 0,
-    acousticness: 0,
-    instrumentalness: 0,
-    liveness: 0,
-    tempo: 0,
-
-    //Analytics
-    bars: [],
-    beats: [],
-    tatums: [],
-    sections: [],
-    segments: [],
-  })
+  resetSongContext()
 }
 
 const getData = obj => get(obj, 'data')
@@ -165,7 +62,7 @@ const checkIfNewSong = data => {
     return data
   }
 
-  return Promise.reject('song is not new')
+  return Promise.reject()
 }
 
 const reset = data => {
@@ -229,7 +126,6 @@ const getSongVibe = () => {
 
 const extractVibeData = data => {
   Object.assign(track, data)
-  console.log('vibe data \n', data)
 }
 
 const getSongContext = () => {
@@ -248,10 +144,6 @@ const extractAudioAnalysis = data => {
   Object.assign(track, { meta, bars, beats, tatums, sections, segments })
 }
 
-
-
-
-
 const fixSync = () => {
   const { tick, progress_ms } = track
   const tock = Date.now() - tick
@@ -264,7 +156,7 @@ const fixSync = () => {
   })
 }
 
-const formatFirstInterval = () => {
+const formatIntervals = () => {
   intervalTypes.forEach(t => {
     const type = track[t]
     type[0].duration = type[0].start + type[0].duration
@@ -274,12 +166,16 @@ const formatFirstInterval = () => {
       if (interval.loudness_max_time) {
         interval.loudness_max_time = interval.loudness_max_time * 1000
       }
-
+     
       interval.start = interval.start * 1000
       interval.duration = interval.duration * 1000
     })
   })
 }
+
+const toPositive = negativeNum => negativeNum - (negativeNum*2)
+
+const distanceToNext = (index, nextIndex, type) => track[type][nextIndex] && toPositive(track[type][index].start - track[type][nextIndex].start) 
 
 const setActiveInterval = () => {
   const determineInterval = (type) => {
@@ -294,21 +190,21 @@ const setActiveInterval = () => {
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
     if (!isEqual(track[type][index], activeInterval[type]) && lastIndex[type] < index) {
+      type == 'beats' && console.log(distanceToNext(index, index+1, type))
       activeInterval[type] = track[type][index]
       lastIndex[type] = index
-      eventHub.emit(removeLastS(type), [activeInterval[type], index])
+      eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index+1, type)])
     }
   })
 }
 
 const startSongSync = () => {
-  formatFirstInterval()
+  formatIntervals()
   fixSync()
 
   syncInterval = setInterval(() => {
     track.progress_ms = (Date.now() - get(track, 'initial_progress_ms')) + get(track, 'initial_track_progress')
     setActiveInterval()
-    // console.log(millisToMinutesAndSeconds(track.progress_ms))
   }, 10)
 }
 const handleSyncErrors = error => {
@@ -360,7 +256,7 @@ const quickStartIfPossible = extraEvent => {
   if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    eventHub.emit('quickStart', extraEvent)
+    // eventHub.emit('quickStart', extraEvent)
   }
 }
 
@@ -373,7 +269,7 @@ eventHub.on('quickStart', extraEvent => {
   getGroups().then(groups => {
 
     globalState.currentGroup = groups[1]
-
+    
     getGroupsAndStopStreams()
       .then(startStream)
       .then(() => require('./lights'))

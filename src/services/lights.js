@@ -236,9 +236,9 @@ eventHub.on('segment', ([segment, index]) => {
 
 /* Used for timing how long the fade down should be */
 eventHub.on('beat', ([beat, index]) => {
-  lightLoop().forEach(id => {
-    Object.assign(lights[id], changeIntensity(getRgb(lights[id]), 1.3))
-  })
+  // lightLoop().forEach(id => {
+  //   Object.assign(lights[id], changeIntensity(getRgb(lights[id]), 1.3))
+  // })
 })
 
 
