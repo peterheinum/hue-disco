@@ -38,7 +38,6 @@ eventHub.on('removeSyncTime', () => {
 })
 
 const resetVariables = () => {
-  console.log(track)
   clearInterval(syncInterval)
   resetSongContext()
 }
@@ -62,7 +61,7 @@ const checkIfNewSong = data => {
     return data
   }
 
-  return Promise.reject()
+  return Promise.reject({ error: null })
 }
 
 const reset = data => {
@@ -71,7 +70,6 @@ const reset = data => {
 }
 
 const getCurrentlyPlaying = () => {
-  console.log('get currently playing')
   if (!authIsValid()) {
     console.log('Auth invalid needs new auth')
     return Promise.reject({ error: 'expired-auth' })
@@ -190,7 +188,6 @@ const setActiveInterval = () => {
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
     if (!isEqual(track[type][index], activeInterval[type]) && lastIndex[type] < index) {
-      type == 'beats' && console.log(distanceToNext(index, index+1, type))
       activeInterval[type] = track[type][index]
       lastIndex[type] = index
       eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index+1, type)])
@@ -210,13 +207,6 @@ const startSongSync = () => {
 const handleSyncErrors = error => {
   console.log(error)
 }
-
-function millisToMinutesAndSeconds(millis) {
-  var minutes = Math.floor(millis / 60000);
-  var seconds = ((millis % 60000) / 1000).toFixed(0);
-  return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
-}
-
 
 const sync = () => {
   getCurrentlyPlaying()
@@ -245,6 +235,11 @@ eventHub.on('authRecieved', recievedAuth => {
   eventHub.emit('quickStart')
 })
 
+
+
+
+
+
 //UTILITIES MADE FOR FASTER DEVELOPMENT
 const quickStartIfPossible = extraEvent => {
   const filePath = path.resolve(`${__dirname}/../utils/spotifyAuth`)
@@ -256,7 +251,7 @@ const quickStartIfPossible = extraEvent => {
   if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    // eventHub.emit('quickStart', extraEvent)
+    eventHub.emit('quickStart', extraEvent)
   }
 }
 
