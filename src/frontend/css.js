@@ -84,5 +84,6 @@ export const grid_container = {
   gridTemplateColumns: '1fr 1fr 1fr 1fr',
   gridTemplateRows: 'auto',
   gridGap: 4 + 'px',
-  padding: 10 + 'px'
+  padding: 10 + 'px',
+  paddingRight: 300 + 'px'
 }

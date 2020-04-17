@@ -23,7 +23,7 @@ const auth = {
 
 const headers = () => ({
   headers: {
-    'Authorization': 'Bearer ' + auth.access_token,
+    'Authorization': `Bearer ${auth.access_token}`,
     'Accept': 'application/json',
     'Content-Type': 'application/json'
   }
@@ -33,15 +33,6 @@ let syncInterval
 let pingInterval
 
 const intervalTypes = ['tatums', 'segments', 'beats', 'bars', 'sections']
-
-let syncTime = 0
-eventHub.on('addSyncTime', () => {
-  syncTime += 50
-})
-
-eventHub.on('removeSyncTime', () => {
-  syncTime -= 50
-})
 
 const resetVariables = () => {
   clearInterval(syncInterval)
@@ -178,6 +169,16 @@ const formatIntervals = () => {
   })
 }
 
+/* Used for changing the sync live */
+let syncTime = 0
+eventHub.on('addSyncTime', () => {
+  syncTime += 10
+})
+
+eventHub.on('removeSyncTime', () => {
+  syncTime -= 10
+})
+
 const toPositive = negativeNum => negativeNum - (negativeNum * 2)
 
 const distanceToNext = (index, nextIndex, type) => track[type][nextIndex] && toPositive(track[type][index].start - track[type][nextIndex].start)
@@ -259,7 +260,7 @@ const quickStartIfPossible = extraEvent => {
   if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    // eventHub.emit('quickStart', extraEvent)
+    eventHub.emit('quickStart', extraEvent)
   }
 }
 

@@ -166,7 +166,7 @@ const dampenLights = () => {
 const init = () => {
   const freshState = {
     lights: {},
-    mode: 'slow-intro',
+    mode: 'flashes',
     colorMap: {}
   }
   Object.assign(state, freshState)
