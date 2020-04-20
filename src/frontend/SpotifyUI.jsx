@@ -19,8 +19,7 @@ import {
 
 export default ({ lights, existingGroups }) => {
   const [initSync, setInitSync] = useState(false)
-  const [activeGroup, setActiveGroup] = useState(null)
-    
+
   useEffect(() => {
     if (!initSync) {
       Date.now() - localStorage.getItem('lastSpotifySync') < 3600000 && setInitSync(true)
@@ -36,26 +35,17 @@ export default ({ lights, existingGroups }) => {
     go('http://localhost:3000/auth/')
   }
 
-  const checkIfStreamIsLive = id => {
-    axios.get(`/api/sync/current/${id}`)
-      .then(resp => setActiveGroup(resp))
-      .catch(() => checkIfStreamIsLive(id))
-  }
-
   const activateGroup = id => {
     axios.post(`/api/sync/start`, {
       syncId: id,
       existingGroups,
     })
-
-    checkIfStreamIsLive(id)
   }
 
   return (
     <div style={{ ...full_size, ...flex_center, ...flex_column }}>
-      {activeGroup
-        ? (<div style={{ ...white_text }}> {activeGroup} active </div>)
-        : !initSync
+      {
+        !initSync
           ? (<div onClick={() => syncSpotify()} style={{ ...button, ...white_text, backgroundColor: '#1DB954' }}> Sync </div>)
           : (
             <div style={{ ...full_size, ...flex_center, ...flex_column }}>

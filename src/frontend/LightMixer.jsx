@@ -37,9 +37,35 @@ const colorMap = {
 }
 
 const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
+const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
+
+const getAvarageRGB = colorMap => {
+  const [r, g, b] = sumRgb(colorMap).map(n => n / Object.keys(colorMap).length)
+  return getRgbAsString({ r, g, b })
+}
+
+const sumRgb = colorMap => Object.keys(colorMap).map(key => colorMap[key]).reduce((acc, cur) => {
+  const [r, g, b] = getRgbFromCssStr(cur).map(x => parseInt(x))
+  acc[0] += r
+  acc[1] += g
+  acc[2] += b
+  return acc
+}, [0, 0, 0])
+
+const sortTones = ({ data }) => {
+  const { lights } = data
+  return Object.keys(lights).map(key => lights[key]).reduce((acc, cur) => {
+    const { tones, id } = cur 
+    tones.forEach(tone => acc[tone] = id)
+    return acc
+  }, {})
+}
+
+
 
 export default () => {
   const [colors, setColors] = useState(colorMap)
+  const [toneAndId, setToneAndId] = useState({})
   const [picking, setPicking] = useState('')
   const [text, setText] = useState('')
 
@@ -65,12 +91,14 @@ export default () => {
     setPicking('')
     setText('')
     axios.post('/api/setColors', { colors })
-      .then(console.log)
+      .then(sortTones)
+      .then(setToneAndId)
       .catch(console.error)
   }
 
   const loadSaved = id => {
-    const colors = JSON.parse(localStorage.getItem('savedSetups'))[id]
+    const savedSetups = JSON.parse(localStorage.getItem('savedSetups'))
+    const colors = savedSetups[id]
     setColors(colors)
     setText(id)
   }
@@ -78,21 +106,21 @@ export default () => {
 
   return (
     <div style={{ ...full_size, ...flex_center, ...flex_column }}>
-      <div style={{...full_width, ...flex_center, flexDirection: 'row' }}> 
-      {localStorage.getItem('savedSetups') && Object.keys(JSON.parse(localStorage.getItem('savedSetups'))).map(id => 
-          <div style={{ backgroundColor: 'white', ...circle, textAlign: 'center'}} onClick={() => loadSaved(id)}> {id} </div>
+      <div style={{ ...full_width, ...flex_center, flexDirection: 'row' }}>
+        {localStorage.getItem('savedSetups') && Object.keys(JSON.parse(localStorage.getItem('savedSetups'))).map(id =>
+          <div style={{ backgroundColor: getAvarageRGB(JSON.parse(localStorage.getItem('savedSetups'))[id]), ...circle, textAlign: 'center' }} onClick={() => loadSaved(id)}> {id} </div>
         )}
       </div>
       {picking && <SketchPicker style="margin-top:10px;" color={colors[picking]} onChange={handleColorChange} />}
       <div style={{ ...flex_center, ...half_size }} >
         <div style={grid_container}>
           {Object.keys(colors).map(tone =>
-          <div style={{ backgroundColor: colors[tone], ...circle, textAlign: 'center' }} onClick={() => setPicking(tone)}> {tone} </div>
+            <div style={{ backgroundColor: colors[tone], ...circle, textAlign: 'center' }} onClick={() => setPicking(tone)}> {tone}<br /><p>{toneAndId[tone]}</p> </div>
           )}
         </div>
       </div>
       <div style={{ ...flex_center }}>
-        <input onChange={handleTextChange} ></input>
+        <input onChange={handleTextChange} value={text}></input>
         <div style={{ ...button, ...createButtonStyle, ...white_text, backgroundColor: btnOriginalColor }} onClick={saveSetup}> Save </div>
       </div>
     </div>

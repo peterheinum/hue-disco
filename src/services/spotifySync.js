@@ -214,10 +214,8 @@ const setActiveInterval = () => {
     if (!isEqual(track[type][index], activeInterval[type])) {
       activeInterval[type] = track[type][index]
       lastIndex[type] = index
-      if(activeInterval[type].loudness_max/avarage > 0.7) {
-        eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index + 1, type)])
-      }  
-      type === 'segments' && console.log('compared to avarage', (activeInterval[type].loudness_max/avarage).toFixed(3), '%')
+      eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index + 1, type)])
+      // type === 'segments' && console.log('compared to avarage', (activeInterval[type].loudness_max/avarage).toFixed(3), '%')
       // if(track.progress_ms > 30000 && track.progress_ms < 60000) intro[type].push(activeInterval[type])
       // if(track.progress_ms > 60000 && track.progress_ms < 90000) somethingElse[type].push(activeInterval[type]) 
     }

@@ -45,11 +45,7 @@ router.post('/sync/start', async (req, res) => {
 })
 
 router.get('/sync/current/:id', async (req, res) => {
-  // const { id } = req.params
-  // await sleep(1000)
-  // state.currentSync == id ?
-  //   res.send(id) :
-  //   res.status(500).send()
+  res.send(state.currentGroup.id)
 })
 
 
@@ -88,7 +84,7 @@ router.post('/flashLight/', async (req, res) => {
 router.post('/setColors', (req, res) => {
   const { colors } = req.body
   eventHub.emit('setColors', colors)
-  res.send(colors)
+  res.send({ lights: state.lights })
 })
 
 
