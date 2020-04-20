@@ -183,10 +183,26 @@ const toPositive = negativeNum => negativeNum - (negativeNum * 2)
 
 const distanceToNext = (index, nextIndex, type) => track[type][nextIndex] && toPositive(track[type][index].start - track[type][nextIndex].start)
 
+const intro = {
+  'tatums': [], 
+  'segments': [], 
+  'beats': [], 
+  'bars': [], 
+  'sections': []
+}
+const somethingElse = {
+  'tatums': [], 
+  'segments': [], 
+  'beats': [], 
+  'bars': [], 
+  'sections': []
+}
+
+let avarage = 0
 const setActiveInterval = () => {
-  const determineInterval = (type) => {
+  const determineInterval = type => {
     const analysis = track[type]
-    const progress = track.progress_ms + syncTime
+    const progress = track.progress_ms + syncTime //Synctime is a varible changed through frontend
     for (let i = 0; i < analysis.length; i++) {
       if (i === (analysis.length - 1)) return i
       if (analysis[i].start < progress && progress < analysis[i + 1].start) return i
@@ -195,16 +211,39 @@ const setActiveInterval = () => {
 
   intervalTypes.forEach(type => {
     const index = determineInterval(type)
-    if (!isEqual(track[type][index], activeInterval[type]) && lastIndex[type] < index) {
+    if (!isEqual(track[type][index], activeInterval[type])) {
       activeInterval[type] = track[type][index]
       lastIndex[type] = index
-      eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index + 1, type)])
+      if(activeInterval[type].loudness_max/avarage > 0.7) {
+        eventHub.emit(removeLastS(type), [activeInterval[type], index, distanceToNext(index, index + 1, type)])
+      }  
+      type === 'segments' && console.log('compared to avarage', (activeInterval[type].loudness_max/avarage).toFixed(3), '%')
+      // if(track.progress_ms > 30000 && track.progress_ms < 60000) intro[type].push(activeInterval[type])
+      // if(track.progress_ms > 60000 && track.progress_ms < 90000) somethingElse[type].push(activeInterval[type]) 
     }
   })
+  // if(track.progress_ms > 90000) {
+  //   fs.writeFileSync('intro.txt', JSON.stringify(intro, null, 4))
+  //   fs.writeFileSync('somethingElse.txt', JSON.stringify(somethingElse, null, 4))
+  //   process.exit()
+  // }
+} 
+
+const calculateAvarageLoudnessMax = () => {
+  //TODO, SPLIT AVARAGE INTO THE DIFFERENT SEGMENTS FOR BETTER COMPARISON
+  const total = track.segments.map(({ loudness_max }) => loudness_max).reduce((acc, cur) => acc += cur, 0)
+  avarage = total/track.segments.length
+  console.log(avarage)
+  console.log(avarage)
+  console.log(avarage)
+  console.log(avarage)
+  console.log(avarage)
+  console.log(avarage)
 }
 
 const startSongSync = () => {
   formatIntervals()
+  calculateAvarageLoudnessMax() 
   fixSync()
 
   syncInterval = setInterval(() => {
@@ -220,7 +259,6 @@ const handleExpiredAuth = () => {
 
 const handleSyncErrors = ({ error }) => {
   error === 'expired-auth' && handleExpiredAuth()
-  console.log(error)
 }
 
 const sync = () => {

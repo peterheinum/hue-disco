@@ -65,6 +65,7 @@ const colorMap = {
 }
 
 eventHub.on('setColors', colorMap => {
+  console.log('new color map ', colorMap)
   Object.assign(state.colorMap, colorMap)
 })
 
@@ -80,7 +81,7 @@ const shuffle = arr => arr
 
 const configurateVariables = () => {
   get(globalState, 'currentGroup.lights').forEach(id => {
-    setLight(id, { id, ...zeroRgb, busy: false, tones: [], interval: null, busyCount: 0 })
+    setLight(id, { id, ...zeroRgb, busy: false, tones: [], capacity: 100, floor: 40 })
   })
 
   Object.assign(state.colorMap, colorMap)
@@ -92,7 +93,7 @@ const configurateVariables = () => {
 
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
-    const { r, g, b } = changeIntensity(getLight(id), 0.7)
+    const { r, g, b } = changeIntensity(getLight(id), 1)
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
 
@@ -155,10 +156,10 @@ const dampenLights = () => {
   const { mode } = state
   if (mode === 'no-dampen') return
   const _lights = getLights()
-
+  const decreasingRate = 0.95
   Object.keys(_lights).forEach(id => {
-    const { r, g, b, busy } = _lights[id]
-    !busy && setLight(id, changeIntensity({ r, g, b }, 0.9))
+    const { r, g, b, busy, capacity, floor } = _lights[id]
+    capacity > floor && !busy && setLight(id, { ...changeIntensity({ r, g, b }, decreasingRate), capacity: capacity * decreasingRate })
   })
 }
 
@@ -216,15 +217,13 @@ eventHub.on('segment', ([segment, index]) => {
   if (globalState.hasSocket && !isBusy(id)) {
     duration > 1000
       ? tweenLightTo({ r, g, b }, id, duration)
-      : setLight(id, { r, g, b })
+      : setLight(id, { r, g, b, capacity: 100 })
   }
 })
 
 eventHub.on('bar', ([bar, index, distanceToNext]) => {
   const { mode } = state
-  console.log(mode)
   if (mode === 'slow-intro') {
-    console.log(index % 2 == 0)
     const temp = index % 2 == 0 ? 0 : 1
     index % 2 == 0
       ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : maxRed, id, distanceToNext))
