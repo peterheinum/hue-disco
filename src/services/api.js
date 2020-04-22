@@ -84,7 +84,7 @@ router.post('/flashLight/', async (req, res) => {
 router.post('/setColors', (req, res) => {
   const { colors } = req.body
   eventHub.emit('setColors', colors)
-  res.send({ lights: state.lights })
+  res.send({ ...state })
 })
 
 

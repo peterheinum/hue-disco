@@ -286,7 +286,7 @@ eventHub.on('authRecieved', recievedAuth => {
 })
 
 //UTILITIES MADE FOR FASTER DEVELOPMENT
-const quickStartIfPossible = extraEvent => {
+const quickStartIfPossible = () => {
   const filePath = path.resolve(`${__dirname}/../utils/spotifyAuth`)
   const json = fs.readFileSync(filePath)
   if (!json.toString()) return
@@ -296,7 +296,7 @@ const quickStartIfPossible = extraEvent => {
   if (Date.now() - timestamp < 3600000) {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    eventHub.emit('quickStart', extraEvent)
+    eventHub.emit('quickStart')
   }
 }
 
@@ -304,17 +304,17 @@ eventHub.on('quickStart', extraEvent => {
   const { getGroups } = require('../services/groupHandler')
   const { startStream, getGroupsAndStopStreams } = require('../services/socket')
   const globalState = require('../utils/globalState')
-
+  
   console.log('quickStart')
   getGroups().then(groups => {
-
+    
     globalState.currentGroup = groups[1]
-
+    
     getGroupsAndStopStreams()
-      .then(startStream)
-      .then(() => require('./lights'))
-      .then(() => extraEvent && eventHub.emit('letsgo'))
+    .then(startStream)
+    .then(() => require('./lights'))
   })
 })
 
-quickStartIfPossible()
+// quickStartIfPossible()
+eventHub.emit('quickStart')

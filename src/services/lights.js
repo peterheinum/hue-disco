@@ -219,22 +219,24 @@ const getDefaultColorForLight = (id, index) => {
   return { r, g, b }
 }
 
+const slowIntro = (index, distanceToNext) => {
+  const temp = index % 2 == 0 ? 0 : 1
+  index % 2 == 0
+    ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : getDefaultColorForLight(id, temp), id, distanceToNext))
+    : lightLoop().forEach(id => tweenLightTo(id % 2 !== temp ? getDefaultColorForLight(id, temp) : zeroRgb, id, distanceToNext))
+}
+
 eventHub.on('bar', ([bar, index, distanceToNext]) => {
   const { mode } = state
-  console.log(mode)
-  if(mode === 'flashes') {
-    removeAllBusy()
-  }
-  if (mode === 'slow-intro') {
-    const temp = index % 2 == 0 ? 0 : 1
-    index % 2 == 0
-      ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : getDefaultColorForLight(id, temp), id, distanceToNext))
-      : lightLoop().forEach(id => tweenLightTo(id % 2 !== temp ? getDefaultColorForLight(id, temp) : zeroRgb, id, distanceToNext))
-  }
 
-  if (mode === 'heartbeat') {
-    heartBeatAll()
-  }
+  const dictionary = [
+    ['flashes', removeAllBusy],
+    ['slow-intro', slowIntro],
+    ['heartbeat', heartBeatAll]
+  ]
+
+  const [__, fn] = dictionary.find(([name]) => name === mode)
+  fn && fn()
 })
 
 const modes = ['heartbeat', 'slow-intro', 'flashes', 'escapade']
@@ -246,7 +248,7 @@ eventHub.on('section', ([section, index]) => {
 let i = 0
 eventHub.on('beat', ([beat, index]) => {
   const { mode } = state
-  if(mode === 'escapade') {
+  if (mode === 'escapade') {
     lightloop().forEach(id => setLight(id, id === i ? maxRed : zeroRgb))
     i++
   }
@@ -258,11 +260,35 @@ eventHub.on('beat', ([beat, index]) => {
 eventHub.on('newSong', init)
 init()
 
+const keyboardConfig = {
+  'C': 'rgb(255, 113, 206)',
+  'C#': 'rgb(1, 205, 254)',
+  'D': 'rgb(5, 255, 161)',
+  'D#': 'rgb(185, 103, 255)',
+  'E': 'rgb(255, 251, 150)',
+  'F': 'rgb(255, 113, 206)',
+  'F#': 'rgb(1, 205, 254)',
+  'G': 'rgb(5, 255, 161)',
+  'G#': 'rgb(185, 103, 255)',
+  'A': 'rgb(255, 251, 150)',
+  'A#': 'rgb(1, 205, 254)',
+  'B': 'rgb(255, 113, 206)'
+}
 
+const toColor = num => {
+  num >>>= 0
+  let b = num & 0xFF
+  let g = (num & 0xFF00) >>> 8
+  let r = (num & 0xFF0000) >>> 16
 
-eventHub.on('letsgo', () => {
-  // set(state, 'mode', 1)
-  // infiniteTween([false, true])
+  return { r, g, b }
+}
+
+eventHub.on('keyboard', key => {
+  const rgb = toColor(key.charCodeAt(0))
+  console.log(rgb)
+
+  lightLoop().forEach(id => setLight(id, { ...rgb }))
 })
 
 const infiniteTween = ([dark, next, intervalLength = 500]) => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Setup from './Setup'
 import LightMixer from './LightMixer'
 import SpotifyUI from './SpotifyUI'
+import Keyboard from './Keyboard'
 import axios from 'axios'
 import { HourglassEmpty } from '@material-ui/icons'
 import { button, menu_button_position } from './css'
@@ -76,13 +77,15 @@ export default () => {
         <div onClick={() => setMenuChoice('settings')} style={{ ...button, backgroundColor: 'rgb(150,40,50)' }}> Settings </div>  
         <div onClick={() => setMenuChoice('lightmixer')} style={{ ...button, backgroundColor: '#FF4500' }}> Light mixer </div>  
         <div onClick={() => setMenuChoice('spotify')} style={{ ...button, backgroundColor: '#1DB954' }}> Spotify Dj </div>  
-        <div onClick={() => fetch('/api/testFunction')} style={{ ...button, backgroundColor: '#1DB954' }}> Test functions </div>  
+        <div onClick={() => setMenuChoice('keyboard')} style={{ ...button, backgroundColor: 'rgb(177, 37, 195)' }}> Keyboard </div>  
+        {/* <div onClick={() => fetch('/api/testFunction')} style={{ ...button, backgroundColor: '#1DB954' }}> Test functions </div>   */}
       </div>
       )}
       
       {menuChoice == 'settings' ? lights.length ? (<Setup {...setupProps} />) : <HourglassEmpty /> : '' }
       {menuChoice == 'lightmixer' && (<LightMixer />)} 
       {menuChoice == 'spotify' && (<SpotifyUI { ...spotifyProps } />)} 
+      {menuChoice == 'keyboard' && (<Keyboard />)} 
     </div>
   )
 }

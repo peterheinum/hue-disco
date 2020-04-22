@@ -12,8 +12,18 @@ express.use(bodyParser.urlencoded({ extended: true }))
 express.use('/', require('./services/reactRenderer'))
 express.use('/api/', require('./services/api'))
 express.use('/auth', require('./auth/spotifyAuth'))
-
 express.use(require('express').static('public'))
+
+const { eventHub } = require('./utils/eventHub')
+
+/* Websocket for keyboard */
+const io = require('socket.io')(http)
+const emitToLights = e => e && eventHub.emit('keyboard', e)
+
+io.on('connect', socket => {
+  socket.on('disconnect', () => console.log('websocket disconnected'))
+  socket.on('message', emitToLights)
+})
 
 http.listen(3000, () => console.log('Webhook server is listening, port 3000'))
 
