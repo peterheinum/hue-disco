@@ -3,7 +3,7 @@ require('dotenv').config({ path: __dirname + '../../.env' })
 const axios = require('axios')
 const { getEntertainmentGroups, baseGroupUrl, flat, doubleRGB } = require('../utils/helpers')
 const { eventHub } = require('../utils/eventHub')
-const state = require('../utils/globalState')
+const state = require('../stores/globalState')
 
 const hueUserName = process.env.HUE_CLIENT_KEY
 const hueClientKey = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')

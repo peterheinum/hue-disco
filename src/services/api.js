@@ -1,7 +1,7 @@
 require('dotenv').config({ path: __dirname + '../../.env' })
 const express = require('express')
 const router = express.Router()
-const state = require('../utils/globalState')
+const state = require('../stores/globalState')
 
 const { eventHub } = require('../utils/eventHub')
 const { calculateXY } = require('../utils/rgbToXY')

@@ -1,9 +1,9 @@
-const { getRgbFromCssStr, rand, doubleRGB, round, sleep } = require('../utils/helpers')
-const state = require('../utils/globalState')
+const { getRgbFromCssStr, rand, doubleRGB, round, sleep } = require('../../utils/helpers')
+const state = require('../../stores/globalState')
 const { interpolateRgb } = require('d3-interpolate')
-const { eventHub } = require('../utils/eventHub')
+const { eventHub } = require('../../utils/eventHub')
 const { get, set } = require('lodash')
-const convertPitchToNote = require('../utils/convertPitchToNote')
+const convertPitchToNote = require('../../utils/convertPitchToNote')
 
 /* UTILS */
 const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
@@ -20,8 +20,8 @@ const removeAllBusy = () => lightLoop().forEach(id => setLight(id, { busy: false
 
 const setLight = (id, value) => {
   !getLight(id)
-    ? set(state, `lights.${id}`, value)
-    : Object.assign(getLight(id), value)
+    ? set(state, `lights.${id}`, { ...value, capacity: 100 })
+    : Object.assign(getLight(id), { ...value, capacity: 100 })
 }
 
 const getLight = id => get(state, `lights.${id}`)
@@ -72,12 +72,18 @@ const shuffle = arr => arr
   .map((a) => a.value)
 
 const configurateVariables = () => {
+  const freshState = {
+    lights: {},
+    mode: 'slow-intro',
+    colorMap: {}
+  }
+  Object.assign(state, freshState)
+
   get(state, 'currentGroup.lights').forEach(id => {
     setLight(id, { id, ...zeroRgb, busy: false, tones: [], capacity: 100, floor: 20 })
   })
 
   Object.assign(state.colorMap, colorMap)
-  //Random tones to random lights
   // shuffle(Object.keys(colorMap)).forEach(tone => {
   Object.keys(colorMap).forEach(tone => {
     const { id } = withLeastTones()
@@ -148,7 +154,7 @@ const assignTone = (id, tone) => {
 
 const dampenLights = () => {
   const { mode } = state
-  if (mode === 'no-dampen') return
+  if (mode !== 'flashes') return
   const _lights = getLights()
   const decreasingRate = 0.95
   Object.keys(_lights).forEach(id => {
@@ -159,18 +165,11 @@ const dampenLights = () => {
 
 
 const init = () => {
-  const freshState = {
-    lights: {},
-    mode: 'slow-intro',
-    colorMap: {}
-  }
-  Object.assign(state, freshState)
-
   configurateVariables()
   setInterval(() => {
     state.hasSocket && emitLights()
     dampenLights()
-  }, 70)
+  }, 50)
 }
 
 
@@ -260,36 +259,6 @@ eventHub.on('beat', ([beat, index]) => {
 eventHub.on('newSong', init)
 init()
 
-const keyboardConfig = {
-  'C': 'rgb(255, 113, 206)',
-  'C#': 'rgb(1, 205, 254)',
-  'D': 'rgb(5, 255, 161)',
-  'D#': 'rgb(185, 103, 255)',
-  'E': 'rgb(255, 251, 150)',
-  'F': 'rgb(255, 113, 206)',
-  'F#': 'rgb(1, 205, 254)',
-  'G': 'rgb(5, 255, 161)',
-  'G#': 'rgb(185, 103, 255)',
-  'A': 'rgb(255, 251, 150)',
-  'A#': 'rgb(1, 205, 254)',
-  'B': 'rgb(255, 113, 206)'
-}
-
-const toColor = num => {
-  num >>>= 0
-  let b = num & 0xFF
-  let g = (num & 0xFF00) >>> 8
-  let r = (num & 0xFF0000) >>> 16
-
-  return { r, g, b }
-}
-
-eventHub.on('keyboard', key => {
-  const rgb = toColor(key.charCodeAt(0))
-  console.log(rgb)
-
-  lightLoop().forEach(id => setLight(id, { ...rgb }))
-})
 
 const infiniteTween = ([dark, next, intervalLength = 500]) => {
   const orange = { r: 255, g: 165, b: 0 }
@@ -309,4 +278,16 @@ const infiniteTween = ([dark, next, intervalLength = 500]) => {
 
     infiniteTween(nextTween)
   }, intervalLength + 500)
+}
+
+module.exports = { 
+  setLight,
+  heartBeat, 
+  slowIntro,
+  lightLoop, 
+  emitLights, 
+  heartBeatAll,
+  tweenLightTo, 
+  changeIntensity, 
+  configurateVariables,
 }

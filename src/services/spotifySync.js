@@ -13,7 +13,7 @@ const {
   resetSongContext,
   lastIndex,
   activeInterval
-} = require('../utils/track')
+} = require('../stores/spotifyState')
 
 const auth = {
   access_token: '',
@@ -300,10 +300,10 @@ const quickStartIfPossible = () => {
   }
 }
 
-eventHub.on('quickStart', extraEvent => {
+eventHub.on('quickStart', () => {
   const { getGroups } = require('../services/groupHandler')
   const { startStream, getGroupsAndStopStreams } = require('../services/socket')
-  const globalState = require('../utils/globalState')
+  const globalState = require('../stores/globalState')
   
   console.log('quickStart')
   getGroups().then(groups => {
@@ -312,7 +312,8 @@ eventHub.on('quickStart', extraEvent => {
     
     getGroupsAndStopStreams()
     .then(startStream)
-    .then(() => require('./lights'))
+    .then(() => require('./LightLab/lights'))
+    .then(() => require('./LightLab/keyboard'))
   })
 })
 

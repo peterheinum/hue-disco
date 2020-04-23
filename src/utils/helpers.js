@@ -6,6 +6,7 @@ const hueUserName = process.env.HUE_CLIENT_KEY
 
 const get = async ({ url, body, method = 'GET', headers }) => await fetch(url, { headers, method, body: JSON.stringify(body) }).then(res => res.json())
 const avg = arr => arr.reduce((acc, cur) => acc += cur, 0) / arr.length
+const int = str => parseInt(str)
 const sleep = async time => new Promise(resolve => setTimeout(() => resolve(), time))
 const flat = arr => arr.reduce((acc, cur) => [...acc, ...cur],[])
 const rand = max => Math.floor(Math.random() * max)
@@ -70,6 +71,7 @@ const shadeRGBColor = (color, percent) => {
 }
 
 module.exports = {
+  int,
   avg,
   get,
   flat,
