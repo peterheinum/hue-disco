@@ -28,6 +28,8 @@ const getLight = id => get(state, `lights.${id}`)
 
 const getLights = () => get(state, 'lights')
 
+const setMode = mode => set(state, 'mode', mode)
+
 const lightLoop = () => Object.keys(get(state, 'lights'))
 
 const getColorsForTone = tone => get(state, `colorMap.${tone}`)
@@ -93,7 +95,7 @@ const configurateVariables = () => {
 
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
-    const { r, g, b } = changeIntensity(getLight(id), 1)
+    const { r, g, b } = changeIntensity(getLight(id), 0.6)
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
 
@@ -129,7 +131,6 @@ const heartBeatAll = () => {
 }
 
 
-
 const getTonesForLight = id => getLight(id).tones
 
 const getLightsForTone = tone => {
@@ -154,11 +155,11 @@ const assignTone = (id, tone) => {
 
 const dampenLights = () => {
   const { mode } = state
-  if (mode !== 'flashes') return
-  const _lights = getLights()
-  const decreasingRate = 0.95
-  Object.keys(_lights).forEach(id => {
-    const { r, g, b, busy, capacity, floor } = _lights[id]
+  if (mode === 'no-dampen') return
+  
+  const decreasingRate = 0.9
+  lightLoop().forEach(id => {
+    const { r, g, b, busy, capacity, floor } = getLight(id)
     capacity > floor && !busy && setLight(id, { ...changeIntensity({ r, g, b }, decreasingRate), capacity: capacity * decreasingRate })
   })
 }
@@ -166,7 +167,7 @@ const dampenLights = () => {
 
 const init = () => {
   configurateVariables()
-  setInterval(() => {
+  state.dampenInterval = setInterval(() => {
     state.hasSocket && emitLights()
     dampenLights()
   }, 50)
@@ -230,7 +231,7 @@ eventHub.on('bar', ([bar, index, distanceToNext]) => {
 
   const dictionary = [
     ['flashes', removeAllBusy],
-    ['slow-intro', slowIntro],
+    ['slow-intro', () => slowIntro(index, distanceToNext)],
     ['heartbeat', heartBeatAll]
   ]
 
@@ -239,24 +240,25 @@ eventHub.on('bar', ([bar, index, distanceToNext]) => {
 })
 
 const modes = ['heartbeat', 'slow-intro', 'flashes', 'escapade']
-eventHub.on('section', ([section, index]) => {
-  const { mode } = state
-  set(state, 'mode', modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)])
-})
+// eventHub.on('section', ([section, index]) => {
+//   const { mode } = state
+//   set(state, 'mode', modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)])
+// })
 
 let i = 0
 eventHub.on('beat', ([beat, index]) => {
   const { mode } = state
   if (mode === 'escapade') {
-    lightloop().forEach(id => setLight(id, id === i ? maxRed : zeroRgb))
+    lightLoop().forEach(id => setLight(id, id === i ? maxRed : zeroRgb))
     i++
   }
 })
 
 
 
+const setSlowIntro = () => setMode('slow-intro')
 
-eventHub.on('newSong', init)
+eventHub.on('newSong', setSlowIntro)
 init()
 
 
@@ -287,6 +289,7 @@ module.exports = {
   lightLoop, 
   emitLights, 
   heartBeatAll,
+  dampenLights,
   tweenLightTo, 
   changeIntensity, 
   configurateVariables,

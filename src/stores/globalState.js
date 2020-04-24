@@ -4,6 +4,7 @@ module.exports = {
   socket: null,
   currentGroup: null,
   lights: {},
+  dampenInterval: null,
   mode: '',
   colorMap: {}
 }

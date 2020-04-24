@@ -1,6 +1,6 @@
 const { eventHub } = require('../../utils/eventHub')
 const { getRgbFromCssStr, int } = require('../../utils/helpers')
-const { lightLoop, emitLights, setLight, changeIntensity } = require('./lights')
+const { lightLoop, emitLights, setLight, changeIntensity, dampenLights } = require('./lights')
 
 const keyboardConfig = {
   'Q': 'rgb(255, 0, 0)',
@@ -39,7 +39,7 @@ const keyboardConfig = {
   '.': 'rgb(0, 0, 115)',
   '-': 'rgb(0, 0, 105)',
 
-  ' ': 'heartBeatAll()'
+  // ' ': 'heartBeatAll()'
 }
 
 const mapKey = key => keyboardConfig[key.toUpperCase()]
@@ -48,31 +48,34 @@ const truthy = val => val
 
 const getCommands = keys => keys.map(mapKey).filter(truthy)
 
+const combineRgbs = (commands) => {
+  const rgbs = commands.map(getRgbFromCssStr)
+  const sumRgbs = (acc, nums) => acc.map((sum, i) => sum + int(nums[i]))
 
-const combineRgbs = (rgbA, rgbB) => {
-  console.log(rgbA, rgbB)
-  rgbA = getRgbFromCssStr(rgbA)
-  rgbB = getRgbFromCssStr(rgbB)
-  const [r, g, b] = ['', '', ''].map((_, i) => (int(rgbA[i]) + int(rgbB[i])) / 2)
+  const [r, g, b] = rgbs.reduce(sumRgbs, [0, 0, 0]).map(num => num / rgbs.length)
+  console.log(r, g, b)
   return { r, g, b }
 }
 
 
 eventHub.on('keyboard', keys => {
+  // !intervalActive && startInterval()
+  if(keys.includes(' ')) {
+    stopInterval()
+  }
   const commands = getCommands(keys)
   console.log(commands)
   if (commands.length > 1) {
-    const rgb = combineRgbs(...commands)
+    const rgb = combineRgbs(commands)
     lightLoop().forEach(id => setLight(id, { ...rgb }))
   }
 
   if (commands.length === 1) {
     const [command] = commands
-    if (!command) return
 
     if (command.includes('rgb')) {
       const [r, g, b] = getRgbFromCssStr(command)
-      lightLoop().forEach(id => setLight(id, { r, g, b }))
+      lightLoop().forEach(id => setLight(id, { r, g, b, capacity: 100 }))
     }
   }
   emitLights()
