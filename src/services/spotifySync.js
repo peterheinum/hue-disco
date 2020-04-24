@@ -318,4 +318,4 @@ eventHub.on('quickStart', () => {
 })
 
 // quickStartIfPossible()
-eventHub.emit('quickStart')
+// eventHub.emit('quickStart')

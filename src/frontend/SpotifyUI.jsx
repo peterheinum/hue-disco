@@ -21,8 +21,8 @@ export default ({ lights, existingGroups }) => {
   const [initSync, setInitSync] = useState(false)
 
   useEffect(() => {
-    if (!initSync) {
-      Date.now() - localStorage.getItem('lastSpotifySync') < 3600000 && setInitSync(true)
+    if (!initSync && Date.now() - localStorage.getItem('lastSpotifySync') < 3600000) {
+      setInitSync(true)
     }
   }, [initSync])
 

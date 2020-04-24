@@ -32,6 +32,10 @@ export const full_width = {
   width: 100 + '%'
 }
 
+export const full_height = {
+  height: 100 + '%'
+}
+
 export const half_size = {
   height: 50 + '%',
   width: 50 + '%',
@@ -58,11 +62,11 @@ export const white_text = {
 export const btnOriginalColor = 'rgb(65,171,57)'
 export const shadedBtnColor = 'rgb(95,211,77)'
 
-export const createButtonStyle = {...flex_center, ...button, ...white_text }
-export const editButtonStyle = {...flex_center, ...button, ...white_text }
+export const createButtonStyle = { ...flex_center, ...button, ...white_text }
+export const editButtonStyle = { ...flex_center, ...button, ...white_text }
 
-export const bigColumnContainer = {...full_size, ...flex_center, ...flex_column, ...space_around }
-export const lightCircleContainer = {...full_width, ...flex_center, ...space_around }
+export const bigColumnContainer = { ...full_size, ...flex_center, ...flex_column, ...space_around }
+export const lightCircleContainer = { ...full_width, ...flex_center, ...space_around }
 
 export const circle = {
   borderRadius: 50 + '%',
@@ -80,10 +84,18 @@ export const menu_button_position = {
 
 export const grid_container = {
   display: 'grid',
-  width: 120+ 'px',
+  width: 120 + 'px',
   gridTemplateColumns: '1fr 1fr 1fr 1fr',
   gridTemplateRows: 'auto',
   gridGap: 4 + 'px',
   padding: 10 + 'px',
   paddingRight: 300 + 'px'
+}
+
+export const keyboard_style = {
+  borderRadius: '6px',
+  padding: '20px',
+  border: '0.1px solid white',
+  fontSize: '18px',
+  fontFamily: 'Courier New'
 }

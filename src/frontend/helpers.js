@@ -1,6 +1,11 @@
-const { eventHub } = require('../../utils/eventHub')
-const { getRgbFromCssStr, int } = require('../../utils/helpers')
-const { lightLoop, emitLights, setLight, changeIntensity, dampenLights } = require('./lights')
+const getRgbFromCssStr = str => str.split('rgb(')[1].split(')')[0].split(',')
+
+const int = num => parseInt(num)
+
+const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
+const round = num => Math.round(num)
+const roundRgb = ({ r, g, b }) => ({ r: round(r), g: round(g), b: round(b) })
+
 
 const keyboardConfig = {
   'Q': 'rgb(255, 0, 0)',
@@ -38,41 +43,24 @@ const keyboardConfig = {
   ',': 'rgb(0, 0, 125)',
   '.': 'rgb(0, 0, 115)',
   '-': 'rgb(0, 0, 105)',
-
-  // ' ': 'heartBeatAll()'
 }
 
 const mapKey = key => keyboardConfig[key.toUpperCase()]
 
 const truthy = val => val
 
-const getCommands = keys => keys.map(mapKey).filter(truthy)
+const getRgbs = keys => keys.map(mapKey).filter(truthy)
 
 const combineRgbs = (commands) => {
   const rgbs = commands.map(getRgbFromCssStr)
   const sumRgbs = (acc, nums) => acc.map((sum, i) => sum + int(nums[i]))
 
   const [r, g, b] = rgbs.reduce(sumRgbs, [0, 0, 0]).map(num => num / rgbs.length)
-  console.log(r, g, b)
   return { r, g, b }
 }
 
-
-eventHub.on('keyboard', keys => {
-  const commands = getCommands(keys)
-  console.log(commands)
-  if (commands.length > 1) {
-    const rgb = combineRgbs(commands)
-    lightLoop().forEach(id => setLight(id, { ...rgb }))
-  }
-
-  if (commands.length === 1) {
-    const [command] = commands
-
-    if (command.includes('rgb')) {
-      const [r, g, b] = getRgbFromCssStr(command)
-      lightLoop().forEach(id => setLight(id, { r, g, b, capacity: 100 }))
-    }
-  }
-  emitLights()
-})
+export const getColorForCombination = keys => {
+  const rgbs = getRgbs(keys)
+  const rgb = combineRgbs(rgbs)
+  return getRgbAsString(roundRgb(rgb))
+}
