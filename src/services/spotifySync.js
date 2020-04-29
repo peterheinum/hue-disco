@@ -285,6 +285,12 @@ eventHub.on('authRecieved', recievedAuth => {
   eventHub.emit('startPingInterval')
 })
 
+
+
+
+
+
+
 //UTILITIES MADE FOR FASTER DEVELOPMENT
 const quickStartIfPossible = () => {
   const filePath = path.resolve(`${__dirname}/../utils/spotifyAuth`)
@@ -317,5 +323,5 @@ eventHub.on('quickStart', () => {
   })
 })
 
-// quickStartIfPossible()
+quickStartIfPossible()
 // eventHub.emit('quickStart')

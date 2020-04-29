@@ -15,10 +15,15 @@ express.use('/auth', require('./auth/spotifyAuth'))
 express.use(require('express').static('public'))
 
 const { eventHub } = require('./utils/eventHub')
+const { getInts } = require('./utils/helpers')
 
 /* Websocket for keyboard */
 const io = require('socket.io')(http)
-const emitToLights = e => e && eventHub.emit('keyboard', e)
+const emitToLights = message => {
+  const { ints, chars } = getInts(message)
+  ints.length && eventHub.emit('activeLights', ints)
+  chars.length && eventHub.emit('keyboard', chars)
+}
 
 io.on('connect', socket => {
   socket.on('disconnect', () => console.log('websocket disconnected'))

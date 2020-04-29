@@ -1,3 +1,5 @@
+const state = require('../../stores/globalState')
+const { set, get } = require('lodash')
 const { eventHub } = require('../../utils/eventHub')
 const { getRgbFromCssStr, int } = require('../../utils/helpers')
 const { lightLoop, emitLights, setLight, changeIntensity, dampenLights } = require('./lights')
@@ -57,6 +59,7 @@ const combineRgbs = (commands) => {
   return { r, g, b }
 }
 
+eventHub.on('activeLights', lightIds => set(state, 'activeLights', lightIds))
 
 eventHub.on('keyboard', keys => {
   const commands = getCommands(keys)

@@ -93,9 +93,11 @@ const configurateVariables = () => {
   })
 }
 
+const isActive = id => state.activeLights.length ? state.activeLights.includes(id) : true
+
 const emitLights = () => {
-  const colorMessage = lightLoop().map(id => {
-    const { r, g, b } = changeIntensity(getLight(id), 0.6)
+  const colorMessage = lightLoop().filter(isActive).map(id => {
+    const { r, g, b } = changeIntensity(getLight(id), state.currentIntensity)
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
 
@@ -257,8 +259,9 @@ eventHub.on('beat', ([beat, index]) => {
 
 
 const setSlowIntro = () => setMode('slow-intro')
+const setFlashes = () => setMode('flashes')
 
-eventHub.on('newSong', setSlowIntro)
+eventHub.on('newSong', setFlashes)
 init()
 
 

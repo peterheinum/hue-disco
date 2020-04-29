@@ -17,17 +17,20 @@ export default () => {
   const [text, setText] = useState('try me')
   const [rgb, setRgb] = useState('rgb(255, 155, 255)')
 
-  
-
   let keysPressed = {}
+  
   const addKeyPress = ({ key }) => {
-    keysPressed[key] = true
+    try {
+      const int = parseInt(key)
+      switchLight(int)
+    } catch (error) {
+      keysPressed[key] = true
+    }
   }
 
   const handleKeyUp = () => {
     if (Object.keys(keysPressed).length) {
       const combinations = Object.keys(keysPressed)
-
       socket.emit('message', combinations)
       console.log(getColorForCombination(combinations))
       setRgb(getColorForCombination(combinations))
