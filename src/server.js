@@ -15,12 +15,25 @@ express.use('/auth', require('./auth/spotifyAuth'))
 express.use(require('express').static('public'))
 
 const { eventHub } = require('./utils/eventHub')
-const { getInts } = require('./utils/helpers')
+
+
+
+
+const filterInt = str => parseInt(str).toString() != 'NaN'
+
+const sortMessage = message => {
+  const ints = message.filter(filterInt)
+  const chars = message.filter(obj => !ints.includes(obj) && obj.length === 1)
+  const switches = message.filter(obj => obj === ' ' || !ints.includes(obj) && !chars.includes(obj))
+  
+  return { ints, chars, switches }
+}
 
 /* Websocket for keyboard */
 const io = require('socket.io')(http)
 const emitToLights = message => {
-  const { ints, chars } = getInts(message)
+  const { ints, chars, switches } = sortMessage(message)
+  switches.length && eventHub.emit('setKeyboardFunction', switches)
   ints.length && eventHub.emit('activeLights', ints)
   chars.length && eventHub.emit('keyboard', chars)
 }

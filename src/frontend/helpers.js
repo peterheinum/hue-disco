@@ -64,3 +64,15 @@ export const getColorForCombination = keys => {
   const rgb = combineRgbs(rgbs)
   return getRgbAsString(roundRgb(rgb))
 }
+
+const filterInt = str => parseInt(str).toString() != 'NaN'
+export const filterInts = arr => arr.filter(filterInt)
+
+export const sortMessage = message => {
+  const ints = message.filter(filterInt)
+  const chars = message.filter(obj => !ints.includes(obj) && obj.length === 1)
+  const switches = message.filter(obj => obj === ' ' || !ints.includes(obj) && !chars.includes(obj))
+  
+  return { ints, chars, switches }
+}
+

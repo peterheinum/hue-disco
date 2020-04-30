@@ -95,9 +95,15 @@ const configurateVariables = () => {
 
 const isActive = id => state.activeLights.length ? state.activeLights.includes(id) : true
 
+const last = {}
+const hasChanged = id => !last[id] ? true : JSON.stringify(getRgb(getLight(id))) != JSON.stringify(getRgb(last[id]))
+
+
 const emitLights = () => {
-  const colorMessage = lightLoop().filter(isActive).map(id => {
+  const colorMessage = lightLoop().map(id => {
+  // const colorMessage = lightLoop().filter(hasChanged).map(id => {
     const { r, g, b } = changeIntensity(getLight(id), state.currentIntensity)
+    last[id] = { r, g, b }
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
 
@@ -286,6 +292,7 @@ const infiniteTween = ([dark, next, intervalLength = 500]) => {
 }
 
 module.exports = { 
+  zeroRgb, 
   setLight,
   heartBeat, 
   slowIntro,
@@ -294,6 +301,7 @@ module.exports = {
   heartBeatAll,
   dampenLights,
   tweenLightTo, 
+  stackFunctions,
   changeIntensity, 
   configurateVariables,
 }

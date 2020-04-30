@@ -1,42 +1,45 @@
 import openSocket from 'socket.io-client'
 const socket = openSocket('http://localhost:3000')
+import { flow } from 'lodash'
 import React, { useState, useEffect } from 'react'
-import { getColorForCombination } from './helpers'
+import { getColorForCombination, sortMessage } from './helpers'
 
-import { 
-  full_size, 
-  full_height, 
-  flex_column, 
-  flex_center, 
-  keyboard_style, 
-  circle, 
-  space_around
+import {
+  full_size,
+  full_height,
+  flex_column,
+  flex_center,
+  keyboard_style,
+  circle,
+  space_around,
+  white_text
 } from './css'
 
 export default () => {
   const [text, setText] = useState('try me')
+  const [activeLights, setActiveLights] = useState([])
+
   const [rgb, setRgb] = useState('rgb(255, 155, 255)')
 
   let keysPressed = {}
-  
+
   const addKeyPress = ({ key }) => {
-    try {
-      const int = parseInt(key)
-      switchLight(int)
-    } catch (error) {
-      keysPressed[key] = true
-    }
+    keysPressed[key] = true
   }
+
+
 
   const handleKeyUp = () => {
     if (Object.keys(keysPressed).length) {
       const combinations = Object.keys(keysPressed)
       socket.emit('message', combinations)
-      console.log(getColorForCombination(combinations))
-      setRgb(getColorForCombination(combinations))
-      const textValue = combinations.toString().split(',').join('')
+      flow([getColorForCombination, setRgb])(combinations)
 
+      const textValue = combinations.toString().split(',').join('')
       setText(textValue)
+
+      const { ints, switches } = sortMessage(combinations)
+      
       keysPressed = {}
     }
   }
@@ -44,17 +47,20 @@ export default () => {
   return (
     <div style={{ ...full_size, ...flex_center }}>
       <div style={{ ...full_height, ...flex_center, ...flex_column, ...space_around, marginRight: '50px' }}>
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
+        <div style={{ ...circle, backgroundColor: rgb }} />
+        <div style={{ ...circle, backgroundColor: rgb }} />
+        <div style={{ ...circle, backgroundColor: rgb }} />
+        <div style={{ ...circle, backgroundColor: rgb }} />
       </div>
-      <input value={text} style={keyboard_style} onKeyDown={addKeyPress} onKeyUp={handleKeyUp}></input>
+      <div style={{ ...flex_center, ...flex_column }}>
+        <h1 style={{ ...white_text }}>{activeLights.toString().split(',').join(' ')}</h1>
+        <input value={text} style={keyboard_style} onKeyDown={addKeyPress} onKeyUp={handleKeyUp}></input>
+      </div>
       <div style={{ ...full_height, ...flex_center, ...flex_column, ...space_around, marginLeft: '50px' }}>
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
-        <div style={{ ...circle, backgroundColor: rgb }} /> 
+        <div style={{ ...circle, backgroundColor: rgb }} />
+        <div style={{ ...circle, backgroundColor: rgb }} />
+        <div style={{ ...circle, backgroundColor: rgb }} />
+        <div style={{ ...circle, backgroundColor: rgb }} />
       </div>
     </div>
   )

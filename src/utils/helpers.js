@@ -70,14 +70,6 @@ const shadeRGBColor = (color, percent) => {
   return 'rgb(' + (Math.round((t - R) * p) + R) + ',' + (Math.round((t - G) * p) + G) + ',' + (Math.round((t - B) * p) + B) + ')'
 }
 
-const filterInt = str => parseInt(str).toString() != 'NaN'
-
-const getInts = arr => {
-  const ints = arr.filter(filterInt)
-  const chars = arr.filter(x => !ints.includes(x))
-  
-  return { ints, chars }
-}
 
 module.exports = {
   int,
@@ -87,7 +79,6 @@ module.exports = {
   rand,
   round,
   sleep,
-  getInts,
   request,
   isEqual, 
   setLight,
