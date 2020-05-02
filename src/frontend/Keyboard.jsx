@@ -2,7 +2,7 @@ import openSocket from 'socket.io-client'
 const socket = openSocket('http://localhost:3000')
 import { flow } from 'lodash'
 import React, { useState, useEffect } from 'react'
-import { getColorForCombination, sortMessage } from './helpers'
+import { getColorForCombination, sortMessage, sortCases } from './helpers'
 
 import {
   full_size,
@@ -28,7 +28,6 @@ export default () => {
   }
 
 
-
   const handleKeyUp = () => {
     if (Object.keys(keysPressed).length) {
       const combinations = Object.keys(keysPressed)
@@ -38,8 +37,16 @@ export default () => {
       const textValue = combinations.toString().split(',').join('')
       setText(textValue)
 
-      const { ints, switches } = sortMessage(combinations)
-      
+      const { ints } = sortMessage(combinations)
+      const { upperCase, lowerCase } = sortCases(combinations)
+
+      if (ints.length) {
+        setActiveLights(ints)
+      }
+      // else if(!upperCase.length && lowerCase.length) {
+      //   setActiveLights([])
+      // }
+
       keysPressed = {}
     }
   }

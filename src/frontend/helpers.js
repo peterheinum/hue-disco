@@ -76,3 +76,10 @@ export const sortMessage = message => {
   return { ints, chars, switches }
 }
 
+export const sortCases = array => {
+  const keys = array.filter(x => x.length === 1)
+  const upperCase = keys.filter(key => key.toUpperCase() === key)
+  const lowerCase = keys.filter(key => key.toLowerCase() === key)
+  return { upperCase, lowerCase }
+}
+

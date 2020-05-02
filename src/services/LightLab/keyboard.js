@@ -42,21 +42,23 @@ const getDuration = () => currentFunctions.map(fn => durations[fn]).filter(truth
 
 const repeatFunction = (fn, count = 10) => {
   const repeat = repeatFunction(fn, count - 1)
-  if(count < 0) fn().then(repeat)
+  if (count < 0) fn().then(repeat)
 }
 
 const getFromFns = fn => functions[fn.toUpperCase()]
 const getFns = fns => fns.map(getFromFns).filter(truthy)
 
-eventHub.on('setKeyboardFunction', fns => {
-  const functions = getFns(fns)
-  currentFunctions.splice(0, currentFunctions.length, ...functions)
-  console.log(currentFunctions, ' fns')
-})
+const setCurrentFunction = functions => currentFunctions.splice(0, currentFunctions.length, ...functions)
+
+// eventHub.on('setKeyboardFunction', fns => {
+//   flow([getFns, setCurrentFunction])(fns)
+// })
 
 const resetFunction = () => currentFunctions.splice(0, currentFunctions.length, 'flashes')
 
-const cssToRgbObj = ([r, g, b]) => ({ r, g, b })
+const arrayRgbToObjRgb = ([r, g, b]) => ({ r, g, b })
+
+const cssToRgbObj = flow([getRgbFromCssStr, arrayRgbToObjRgb])
 
 const setLockedLights = lights => {
   state.lockedLights.splice(0, state.lockedLights.length, ...lights)
@@ -69,36 +71,49 @@ const setActiveLights = lights => {
 const resetLockedLights = () => setLockedLights([])
 
 const lockLights = (lights, duration) => {
+  if(!lights.length) return
+  const _lights = [...lights]
+  setLockedLights([...lights])
   setActiveLights([])
-  setLockedLights(lights)
+  
   sleep(duration).then(resetLockedLights)
+  sleep(duration).then(() => setActiveLights(_lights))
+}
+
+const sortCases = keys => {
+  const upperCase = keys.filter(key => key.toUpperCase() === key)
+  const lowerCase = keys.filter(key => key.toLowerCase() === key)
+  return { upperCase, lowerCase }
 }
 
 eventHub.on('keyboard', keys => {
+  const { upperCase, lowerCase } = sortCases(keys)
+  lowerCase.length && setCurrentFunction(['tweenSlow'])
+  upperCase.length && setCurrentFunction(['flashes'])
+
   const colors = getColors(keys)
-  
+
   const { activeLights } = state
-  const combineAndUpValues = flow([combineRgbs, args => changeIntensity(args, 1.5)])
-  const rgb = colors.length > 1 ? combineAndUpValues(colors) : cssToRgbObj(getRgbFromCssStr(colors[0]))
+  const combineAndUpValues = flow([combineRgbs, args => changeIntensity(args, 1.25)])
+
+  const rgb = colors.length > 1
+    ? combineAndUpValues(colors)
+    : cssToRgbObj(colors[0])
+
   if (!rgb) return
 
 
   if (currentFunctions.includes('flashes')) {
     activeLights.forEach(id => setLight(id, rgb))
-    return
   }
-
+  
   if (currentFunctions.includes('tweenSlow')) {
     const duration = getDuration()
     activeLights.forEach(id => tweenLightTo(rgb, id, duration))
     lockLights(activeLights, duration)
-    resetFunction()
-    return
   }
-  
+
   if (currentFunctions.includes('tweenFast')) {
     activeLights.forEach(id => tweenLightTo(rgb, id, duration))
-    resetFunction()
-    return
   }
 })

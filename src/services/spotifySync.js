@@ -324,5 +324,6 @@ eventHub.on('quickStart', () => {
 })
 
 // require('./LightLab/keyboard')
+// require('./LightLab/lights')
 // quickStartIfPossible()
-// eventHub.emit('quickStart')
+eventHub.emit('quickStart')
