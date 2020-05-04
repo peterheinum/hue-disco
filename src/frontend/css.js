@@ -1,5 +1,22 @@
+export const lovisas_style = {
+  fontFamily: 'Bungee Hairline, cursive',
+}
+
+export const battery_shape = {
+  height: '50px',
+  width: '200px',
+  border: 'solid white 1px', 
+}
+
+export const battery_internal = {
+  height: '50px',
+  backgroundColor: 'white',
+}
+
 export const button = {
-  fontSize: 18 + 'px',
+  fontSize: 14 + 'px',
+  fontWeight: 'bold',
+  color: 'white',
   height: 50 + 'px',
   width: 100 + 'px',
   borderRadius: 6 + 'px',
@@ -7,7 +24,8 @@ export const button = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  margin: 4 + 'px'
+  margin: 4 + 'px',
+  fontFamily: 'Bungee Hairline, cursive',
 }
 
 export const wide_button = {
@@ -56,8 +74,10 @@ export const flex_column = {
 }
 
 export const white_text = {
-  color: 'whitesmoke'
+  color: 'whitesmoke',
+  fontFamily: 'Courier New'
 }
+
 
 export const btnOriginalColor = 'rgb(65,171,57)'
 export const shadedBtnColor = 'rgb(95,211,77)'
@@ -97,5 +117,6 @@ export const keyboard_style = {
   padding: '20px',
   border: '0.1px solid white',
   fontSize: '18px',
+  // fontFamily: 'Bungee Shade, cursive',
   fontFamily: 'Courier New'
 }

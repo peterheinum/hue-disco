@@ -1,29 +1,9 @@
 const state = require('../../stores/globalState')
 const { set, get, flow } = require('lodash')
 const { eventHub } = require('../../utils/eventHub')
-const { getRgbFromCssStr, int, sleep } = require('../../utils/helpers')
+const { getRgbFromCssStr, int, sleep, flat } = require('../../utils/helpers')
 const keyboardConfig = require('../../utils/keyboardColorConfig')
 const { lightLoop, emitLights, setLight, changeIntensity, dampenLights, zeroRgb, tweenLightTo } = require('./lights')
-
-const truthy = val => val
-
-const currentFunctions = ['flashes']
-
-const getFromKeyConf = key => keyboardConfig[key.toUpperCase()]
-const getColors = keys => keys.map(getFromKeyConf).filter(truthy)
-
-const combineRgbs = colors => {
-  const rgbs = colors.map(getRgbFromCssStr)
-  const sumRgbs = (acc, nums) => acc.map((sum, i) => sum + int(nums[i]))
-
-  const [r, g, b] = rgbs.reduce(sumRgbs, [0, 0, 0]).map(num => num / rgbs.length)
-  return { r, g, b }
-}
-
-const notIncludedInLockedLights = light => !state.lockedLights.includes(light)
-const filterLockedLights = lights => lights.filter(notIncludedInLockedLights)
-
-eventHub.on('activeLights', lights => set(state, 'activeLights', filterLockedLights(lights)))
 
 const functions = {
   'SHIFT': 'tweenSlow',
@@ -37,22 +17,35 @@ const durations = {
   'tweenFast': 1000,
 }
 
+const currentFunctions = ['flashes']
+
+
+const truthy = val => val
+
+const getFromKeyConf = key => keyboardConfig[key.toUpperCase()]
+
+const getColors = keys => keys.map(getFromKeyConf).filter(truthy)
+
+const combineRgbs = colors => {
+  const rgbs = colors.map(getRgbFromCssStr)
+  const sumRgbs = (acc, nums) => acc.map((sum, i) => sum + int(nums[i]))
+
+  const [r, g, b] = rgbs.reduce(sumRgbs, [0, 0, 0]).map(num => num / rgbs.length)
+  return { r, g, b }
+}
+
+const notIncludedInLockedLights = light => !state.lockedLights.includes(light)
+const filterLockedLights = lights => lights.filter(notIncludedInLockedLights)
+
+
 
 const getDuration = () => currentFunctions.map(fn => durations[fn]).filter(truthy)
 
-const repeatFunction = (fn, count = 10) => {
-  const repeat = repeatFunction(fn, count - 1)
-  if (count < 0) fn().then(repeat)
-}
-
 const getFromFns = fn => functions[fn.toUpperCase()]
+
 const getFns = fns => fns.map(getFromFns).filter(truthy)
 
 const setCurrentFunction = functions => currentFunctions.splice(0, currentFunctions.length, ...functions)
-
-// eventHub.on('setKeyboardFunction', fns => {
-//   flow([getFns, setCurrentFunction])(fns)
-// })
 
 const resetFunction = () => currentFunctions.splice(0, currentFunctions.length, 'flashes')
 
@@ -68,14 +61,23 @@ const setActiveLights = lights => {
   state.activeLights.splice(0, state.activeLights.length, ...lights)
 }
 
+eventHub.on('activeLights', lights => set(state, 'activeLights', filterLockedLights(lights)))
+
+const callStack = ([fn, ...rest]) => fn().then(() => rest.length && callStack(rest))
+
+// eventHub.on('setKeyboardFunction', fns => {
+//   flow([getFns, setCurrentFunction])(fns)
+// })
+
+
 const resetLockedLights = () => setLockedLights([])
 
 const lockLights = (lights, duration) => {
-  if(!lights.length) return
+  if (!lights.length) return
   const _lights = [...lights]
   setLockedLights([...lights])
   setActiveLights([])
-  
+
   sleep(duration).then(resetLockedLights)
   sleep(duration).then(() => setActiveLights(_lights))
 }
@@ -84,6 +86,20 @@ const sortCases = keys => {
   const upperCase = keys.filter(key => key.toUpperCase() === key)
   const lowerCase = keys.filter(key => key.toLowerCase() === key)
   return { upperCase, lowerCase }
+}
+
+const createOneTween = (lights, rgb, duration) => ([
+  () => Promise.all(lights.map(id => tweenLightTo(rgb, id, duration))),
+  () => Promise.all(lights.map(id => tweenLightTo(changeIntensity(rgb, 0.5), id, duration))),
+])
+
+const createTweenStack = (lights, rgb, duration, size) => {
+  const tweenStack = []
+  for (let index = 0; index <= size; index++) {
+    tweenStack.push(createOneTween(lights, rgb, duration))
+  }
+
+  return flat(tweenStack)
 }
 
 eventHub.on('keyboard', keys => {
@@ -106,11 +122,22 @@ eventHub.on('keyboard', keys => {
   if (currentFunctions.includes('flashes')) {
     activeLights.forEach(id => setLight(id, rgb))
   }
-  
+
   if (currentFunctions.includes('tweenSlow')) {
     const duration = getDuration()
-    activeLights.forEach(id => tweenLightTo(rgb, id, duration))
-    lockLights(activeLights, duration)
+    const lights = [...activeLights]
+    // const stack = [
+    //   () => Promise.all(lights.map(id => tweenLightTo(rgb, id, duration))),
+    //   () => Promise.all(lights.map(id => tweenLightTo(changeIntensity(rgb, 0.5), id, duration))),
+    //   () => Promise.all(lights.map(id => tweenLightTo(rgb, id, duration))),
+    //   () => Promise.all(lights.map(id => tweenLightTo(changeIntensity(rgb, 0.5), id, duration))),
+    //   () => Promise.all(lights.map(id => tweenLightTo(rgb, id, duration))),
+    //   () => Promise.all(lights.map(id => tweenLightTo(changeIntensity(rgb, 0.5), id, duration))),
+    // ]
+    const stack = createTweenStack(lights, rgb, duration, 3)
+    console.log(stack[0].toString())
+    callStack(stack)
+    lockLights(activeLights, duration * stack.length)
   }
 
   if (currentFunctions.includes('tweenFast')) {

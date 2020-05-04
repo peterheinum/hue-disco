@@ -164,7 +164,7 @@ const assignTone = (id, tone) => {
 const dampenLights = () => {
   const { mode } = state
   if (mode === 'no-dampen') return
-  
+
   const decreasingRate = 0.9
   lightLoop().forEach(id => {
     const { r, g, b, busy, capacity, floor } = getLight(id)
@@ -235,23 +235,25 @@ const slowIntro = (index, distanceToNext) => {
 }
 
 eventHub.on('bar', ([bar, index, distanceToNext]) => {
-  const { mode } = state
+  // const { mode } = state
 
-  const dictionary = [
-    ['flashes', removeAllBusy],
-    ['slow-intro', () => slowIntro(index, distanceToNext)],
-    ['heartbeat', heartBeatAll]
-  ]
+  // const dictionary = [
+  //   // ['flashes', removeAllBusy],
+  //   ['slow-intro', () => slowIntro(index, distanceToNext)],
+  //   // ['heartbeat', heartBeatAll]
+  // ]
 
-  const [__, fn] = dictionary.find(([name]) => name === mode)
-  fn && fn()
+  // const [__, fn] = dictionary.find(([name]) => name === mode)
+  // fn && fn()
+  const fn = () => slowIntro(index, distanceToNext)
+  fn()
 })
 
-const modes = ['heartbeat', 'slow-intro', 'flashes', 'escapade']
-// eventHub.on('section', ([section, index]) => {
-//   const { mode } = state
-//   set(state, 'mode', modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)])
-// })
+const modes = ['slow-intro'] //, 'flashes']
+eventHub.on('section', ([section, index]) => {
+  const { mode } = state
+  set(state, 'mode', modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)])
+})
 
 let i = 0
 eventHub.on('beat', ([beat, index]) => {
@@ -291,17 +293,17 @@ const infiniteTween = ([dark, next, intervalLength = 500]) => {
   }, intervalLength + 500)
 }
 
-module.exports = { 
-  zeroRgb, 
+module.exports = {
+  zeroRgb,
   setLight,
-  heartBeat, 
+  heartBeat,
   slowIntro,
-  lightLoop, 
-  emitLights, 
+  lightLoop,
+  emitLights,
   heartBeatAll,
   dampenLights,
-  tweenLightTo, 
+  tweenLightTo,
   stackFunctions,
-  changeIntensity, 
+  changeIntensity,
   configurateVariables,
 }
