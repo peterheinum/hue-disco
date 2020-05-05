@@ -3,13 +3,13 @@ export const lovisas_style = {
 }
 
 export const battery_shape = {
-  height: '50px',
-  width: '200px',
+  height: '150px',
+  width: '30px',
   border: 'solid white 1px', 
 }
 
 export const battery_internal = {
-  height: '50px',
+  width: '30px',
   backgroundColor: 'white',
 }
 
@@ -67,6 +67,10 @@ export const flex_center = {
 
 export const space_around = {
   justifyContent: 'space-around'
+}
+
+export const space_between = {
+  justifyContent: 'space-between'
 }
 
 export const flex_column = {

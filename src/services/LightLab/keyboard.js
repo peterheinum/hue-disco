@@ -118,7 +118,6 @@ eventHub.on('keyboard', keys => {
 
   if (!rgb) return
 
-
   if (currentFunctions.includes('flashes')) {
     activeLights.forEach(id => setLight(id, rgb))
   }
@@ -126,16 +125,8 @@ eventHub.on('keyboard', keys => {
   if (currentFunctions.includes('tweenSlow')) {
     const duration = getDuration()
     const lights = [...activeLights]
-    // const stack = [
-    //   () => Promise.all(lights.map(id => tweenLightTo(rgb, id, duration))),
-    //   () => Promise.all(lights.map(id => tweenLightTo(changeIntensity(rgb, 0.5), id, duration))),
-    //   () => Promise.all(lights.map(id => tweenLightTo(rgb, id, duration))),
-    //   () => Promise.all(lights.map(id => tweenLightTo(changeIntensity(rgb, 0.5), id, duration))),
-    //   () => Promise.all(lights.map(id => tweenLightTo(rgb, id, duration))),
-    //   () => Promise.all(lights.map(id => tweenLightTo(changeIntensity(rgb, 0.5), id, duration))),
-    // ]
+  
     const stack = createTweenStack(lights, rgb, duration, 3)
-    console.log(stack[0].toString())
     callStack(stack)
     lockLights(activeLights, duration * stack.length)
   }
