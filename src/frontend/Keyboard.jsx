@@ -31,9 +31,9 @@ const lightColors = {
   5: 'rgb(255, 155, 255)',
   6: 'rgb(255, 155, 255)',
 }
-
 const lessenTimers = (acc, cur) => {
-  acc[cur] > 0
+  acc[cur] === 300 && delete acc[cur]
+  acc[cur] && acc[cur] > 0
     ? acc[cur] -= time / 20
     : delete acc[cur]
   return acc
@@ -53,7 +53,7 @@ export default () => {
 
   const partOfTime = time / 20
   useInterval(() => {
-    setLockedLights(  keys(lockedLights).reduce(lessenTimers, lockedLights))
+    setLockedLights(keys(lockedLights).reduce(lessenTimers, lockedLights))
   }, keys(lockedLights).length ? partOfTime : null)
 
   let keysPressed = {}
@@ -82,9 +82,8 @@ export default () => {
       const { ints } = sortMessage(combinations)
       const { upperCase, lowerCase } = sortCases(combinations)
 
-      const nonLockedInts = ints.filter(x => !keys(lockedLights).includes(x))
-      if (nonLockedInts.length) {
-        setActiveLights(nonLockedInts)
+      if (ints.length) {
+        setActiveLights(ints)
       }
       else if (!upperCase.length && lowerCase.length) {
         setLockedLights({ ...lockedLights, ...createMaxedTimers(activeLights) })
