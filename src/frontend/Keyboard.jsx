@@ -34,7 +34,7 @@ const lightColors = {
 const lessenTimers = (acc, cur) => {
   acc[cur] === 300 && delete acc[cur]
   acc[cur] && acc[cur] > 0
-    ? acc[cur] -= time / 20
+    ? acc[cur] -= time / 10
     : delete acc[cur]
   return acc
 }
@@ -51,9 +51,10 @@ export default () => {
 
   const keys = obj => Object.keys(obj)
 
-  const partOfTime = time / 20
+  const partOfTime = time / 10
   useInterval(() => {
-    setLockedLights(keys(lockedLights).reduce(lessenTimers, lockedLights))
+    const _lockedLights = Object.assign({}, keys(lockedLights).reduce(lessenTimers, lockedLights))
+    setLockedLights(_lockedLights)
   }, keys(lockedLights).length ? partOfTime : null)
 
   let keysPressed = {}
@@ -82,8 +83,9 @@ export default () => {
       const { ints } = sortMessage(combinations)
       const { upperCase, lowerCase } = sortCases(combinations)
 
-      if (ints.length) {
-        setActiveLights(ints)
+      const nonLockedInts = ints.filter(x => !keys(lockedLights).includes(x)) 
+      if (nonLockedInts.length) {
+        setActiveLights(nonLockedInts)
       }
       else if (!upperCase.length && lowerCase.length) {
         setLockedLights({ ...lockedLights, ...createMaxedTimers(activeLights) })
@@ -103,9 +105,10 @@ export default () => {
       </div>
       <div style={{ ...flex_center, ...flex_column }}>
         <div style={{ ...full_width, ...flex_center, ...space_between }}>
-          {keys(lockedLights).length ? durationSortedLockedLights().map((light, index) => <LockedTimer key={index} lockedLight={light} timeLocked={6000} />) : null}
+          {keys(lockedLights).length ? durationSortedLockedLights().map((light, index) => <LockedTimer key={index} lockedLight={light} timeLeft={lockedLights[light]} timeLocked={6000} />) : null}
         </div>
 
+        <h1 style={{ ...white_text, ...lovisas_style }}>{lockedLights['1']}</h1>
         <h1 style={{ ...white_text, ...lovisas_style }}>{'Active: ' + activeLights.toString().split(',').join(' ')}</h1>
         <input value={text} style={keyboard_style} onKeyDown={addKeyPress} onKeyUp={handleKeyUp}></input>
       </div>

@@ -18,20 +18,17 @@ import {
 } from '../css'
 
 
-export default ({ lockedLight, timeLocked }) => {
-  const partOfTime = timeLocked / 20
-  const [duration, setDuration] = useState(timeLocked)
-
-  useInterval(() => {
-    setDuration(duration - partOfTime)
-  }, duration ? partOfTime : null)
+export default ({ lockedLight, timeLeft, timeLocked }) => {
+  // const [percentage, setPercentage] = useState(100)
+  // useEffect(() => {
+  //   console.log(timeLeft/timeLocked)
+  //   setPercentage((timeLeft/timeLocked)*100)
+  // }, [timeLeft, timeLocked])
 
   return (
-    duration
-      ? <div style={{ ...flex_center, ...flex_column }}>
-        <h1 style={{ ...white_text, ...lovisas_style }}>{lockedLight.toString()}</h1>
-        <div style={{ ...battery_shape }}><div style={{ ...battery_internal, height: 100 - ((duration / timeLocked) * 100) + '%' }}></div></div>
-      </div>
-      : null
+    <div style={{ ...flex_center, ...flex_column }}>
+      <h1 style={{ ...white_text, ...lovisas_style }}>{lockedLight.toString()}</h1>
+      <div style={{ ...battery_shape }}><div style={{ ...battery_internal, height: (timeLeft / timeLocked) * 100 + '%' }}></div></div>
+    </div>
   )
 }
