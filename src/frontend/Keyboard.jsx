@@ -31,15 +31,18 @@ const lightColors = {
   5: 'rgb(255, 155, 255)',
   6: 'rgb(255, 155, 255)',
 }
+
+const time = 6000
+const partOfTime = time / 5
+
 const lessenTimers = (acc, cur) => {
   acc[cur] === 300 && delete acc[cur]
   acc[cur] && acc[cur] > 0
-    ? acc[cur] -= time / 10
+    ? acc[cur] -= partOfTime
     : delete acc[cur]
   return acc
 }
 
-const time = 6000
 
 const createMaxedTimers = lights => lights.reduce((acc, cur) => ({ ...acc, [cur]: time }), {})
 
@@ -48,10 +51,10 @@ export default () => {
   const [activeLights, setActiveLights] = useState([])
   const [lockedLights, setLockedLights] = useState({})
   const [rgb, setRgb] = useState({ ...lightColors })
-
+ 
   const keys = obj => Object.keys(obj)
 
-  const partOfTime = time / 10
+
   useInterval(() => {
     const _lockedLights = Object.assign({}, keys(lockedLights).reduce(lessenTimers, lockedLights))
     setLockedLights(_lockedLights)
@@ -87,8 +90,9 @@ export default () => {
       if (nonLockedInts.length) {
         setActiveLights(nonLockedInts)
       }
-      else if (!upperCase.length && lowerCase.length) {
-        setLockedLights({ ...lockedLights, ...createMaxedTimers(activeLights) })
+      
+      if (!upperCase.length && lowerCase.length) {
+        setLockedLights({ ...lockedLights, ...createMaxedTimers(nonLockedInts.length ? nonLockedInts : activeLights) })
         setActiveLights([])
       }
 
@@ -110,7 +114,7 @@ export default () => {
 
         <h1 style={{ ...white_text, ...lovisas_style }}>{lockedLights['1']}</h1>
         <h1 style={{ ...white_text, ...lovisas_style }}>{'Active: ' + activeLights.toString().split(',').join(' ')}</h1>
-        <input value={text} style={keyboard_style} onKeyDown={addKeyPress} onKeyUp={handleKeyUp}></input>
+        <input value={text} onChange={() => null} style={keyboard_style} onKeyDown={addKeyPress} onKeyUp={handleKeyUp}></input>
       </div>
       <div style={{ ...full_height, ...flex_center, ...flex_column, ...space_around, marginLeft: '50px' }}>
         <div style={{ ...circle, backgroundColor: rgb[4] }} />

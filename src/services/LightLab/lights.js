@@ -10,6 +10,8 @@ const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
 
 const roundRgb = ({ r, g, b }) => ({ r: round(r), g: round(g), b: round(b) })
 
+const randomRgb = () => roundRgb({ r: rand(255), g: rand(255), b: rand(255) })
+
 const getRgb = ({ r, g, b }) => ({ r, g, b })
 
 const changeIntensity = ({ r, g, b }, intensity) => roundRgb({ r: intensity * r, g: intensity * g, b: intensity * b })
@@ -227,26 +229,34 @@ const getDefaultColorForLight = (id, index) => {
   return { r, g, b }
 }
 
+const randomSlowIntro = (index, distanceToNext) => {
+  const temp = index % 2 == 0 ? 0 : 1
+  index % 2 == 0
+    ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : randomRgb(), id, distanceToNext))
+    : lightLoop().forEach(id => tweenLightTo(id % 2 !== temp ? randomRgb() : zeroRgb, id, distanceToNext))
+}
+
 const slowIntro = (index, distanceToNext) => {
   const temp = index % 2 == 0 ? 0 : 1
   index % 2 == 0
-    ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : getDefaultColorForLight(id, temp), id, distanceToNext))
-    : lightLoop().forEach(id => tweenLightTo(id % 2 !== temp ? getDefaultColorForLight(id, temp) : zeroRgb, id, distanceToNext))
+    ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : getDefaultColorForLight(id, index % 3 == 0 ? 1 : 0), id, distanceToNext))
+    : lightLoop().forEach(id => tweenLightTo(id % 2 !== temp ? getDefaultColorForLight(id, index % 4 == 0 ? 1 : 0) : zeroRgb, id, distanceToNext))
 }
 
 eventHub.on('bar', ([bar, index, distanceToNext]) => {
-  // const { mode } = state
+  const { mode } = state
 
-  // const dictionary = [
-  //   // ['flashes', removeAllBusy],
-  //   ['slow-intro', () => slowIntro(index, distanceToNext)],
-  //   // ['heartbeat', heartBeatAll]
-  // ]
+  const dictionary = [
+    ['flashes', removeAllBusy],
+    ['slow-intro', () => slowIntro(index, distanceToNext)],
+    ['random-slow-intro', () => randomSlowIntro(index, distanceToNext)],
+  ]
 
   // const [__, fn] = dictionary.find(([name]) => name === mode)
   // fn && fn()
   const fn = () => slowIntro(index, distanceToNext)
   fn()
+  
 })
 
 const modes = ['slow-intro'] //, 'flashes']
