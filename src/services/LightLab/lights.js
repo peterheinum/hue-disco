@@ -98,8 +98,6 @@ const configurateVariables = () => {
 const isActive = id => state.activeLights.length ? state.activeLights.includes(id) : true
 
 const last = {}
-const hasChanged = id => !last[id] ? true : JSON.stringify(getRgb(getLight(id))) != JSON.stringify(getRgb(last[id]))
-
 
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
@@ -251,16 +249,19 @@ eventHub.on('bar', ([bar, index, distanceToNext]) => {
     ['slow-intro', () => slowIntro(index, distanceToNext)],
     ['random-slow-intro', () => randomSlowIntro(index, distanceToNext)],
   ]
-
+  //Enabled for flashes to be on
+  removeAllBusy()
+  index % 2 === 0 && heartBeatAll()
   // const [__, fn] = dictionary.find(([name]) => name === mode)
   // fn && fn()
-  const fn = () => slowIntro(index, distanceToNext)
-  fn()
+  // const fn = () => slowIntro(index, distanceToNext)
+  // fn()
   
 })
 
-const modes = ['slow-intro'] //, 'flashes']
 eventHub.on('section', ([section, index]) => {
+  // const modes = ['slow-intro'] //, 'flashes']
+  const modes = ['flashes'] 
   const { mode } = state
   set(state, 'mode', modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)])
 })
