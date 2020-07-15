@@ -44,10 +44,12 @@ export default () => {
     }
   }, [init])
 
-  const sortLightTypes = lights => Object.keys(lights).map(key =>
-    lights[key].productname == 'Hue color lamp'
-      ? { bulb: true, ...lights[key], id: key, ...xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri) }
-      : { strip: true, ...lights[key], id: key, ...xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri) }
+  const sortLightTypes = lights => Object.keys(lights).map(key => {
+    console.log(key, xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri))
+    return lights[key].productname == 'Hue color lamp'
+    ? { bulb: true, ...lights[key], id: key, ...xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri) }
+    : { strip: true, ...lights[key], id: key, ...xyBriToRgb(lights[key].state.xy[0], lights[key].state.xy[1], lights[key].state.bri) }
+  }
   )
 
   const getLightSetup = () => axios.get('/api/getConfig')
@@ -75,7 +77,7 @@ export default () => {
       <link href="https://fonts.googleapis.com/css2?family=Bungee+Hairline&display=swap" rel="stylesheet" />
       {init && (
         <div style={menu_button_position}>
-        {/* <div onClick={() => setMenuChoice('settings')} style={{ ...button, backgroundColor: 'rgb(150,40,50)' }}> Setup </div>   */}
+        <div onClick={() => setMenuChoice('settings')} style={{ ...button, backgroundColor: 'rgb(150,40,50)' }}> Setup </div>  
         <div onClick={() => setMenuChoice('keyboard')} style={{ ...button, backgroundColor: 'rgb(177, 37, 195)' }}> Keyboard </div>  
         <div onClick={() => setMenuChoice('spotify')} style={{ ...button, backgroundColor: '#1DB954' }}> Spotify </div>  
         <div onClick={() => setMenuChoice('lightmixer')} style={{ ...button, backgroundColor: 'rgb(0,242,255)' }}> Colors </div>  

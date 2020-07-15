@@ -320,10 +320,9 @@ eventHub.on('quickStart', () => {
     .then(startStream)
     .then(() => require('./LightLab/lights'))
     .then(() => require('./LightLab/keyboard'))
+    .then(() => require('../midi'))
   })
 })
 
-// require('./LightLab/keyboard')
-// require('./LightLab/lights')
-quickStartIfPossible()
-// eventHub.emit('quickStart')
+// quickStartIfPossible()
+eventHub.emit('quickStart')

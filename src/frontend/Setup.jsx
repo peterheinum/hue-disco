@@ -114,6 +114,7 @@ export default ({ lights, setMenuChoice, existingGroups, setExistingGroups }) =>
                     backgroundColor: light.currentColor
                   }}>
                   {light.id}
+
                   {light.bulb ? (<WbIncandescent />) : (<LinearScale />)}
                 </div>
               ))}

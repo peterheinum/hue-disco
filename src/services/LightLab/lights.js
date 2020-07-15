@@ -1,9 +1,10 @@
 const { getRgbFromCssStr, rand, doubleRGB, round, sleep } = require('../../utils/helpers')
-const state = require('../../stores/globalState')
-const { interpolateRgb } = require('d3-interpolate')
-const { eventHub } = require('../../utils/eventHub')
-const { get, set } = require('lodash')
 const convertPitchToNote = require('../../utils/convertPitchToNote')
+const { eventHub } = require('../../utils/eventHub')
+const { interpolateRgb } = require('d3-interpolate')
+const state = require('../../stores/globalState')
+const { get, set } = require('lodash')
+const eventhub = require('../../utils/eventHub')
 
 /* UTILS */
 const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
@@ -282,7 +283,6 @@ const setFlashes = () => setMode('flashes')
 
 eventHub.on('newSong', setFlashes)
 init()
-
 
 const infiniteTween = ([dark, next, intervalLength = 500]) => {
   const orange = { r: 255, g: 165, b: 0 }
