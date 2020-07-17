@@ -85,7 +85,7 @@ const configurateVariables = () => {
   Object.assign(state, freshState)
 
   get(state, 'currentGroup.lights').forEach(id => {
-    setLight(id, { id, ...zeroRgb, busy: false, tones: [], capacity: 100, floor: 20 })
+    setLight(id, { id, ...zeroRgb, busy: false, tones: [], capacity: 100, floor: 70 })
   })
 
   Object.assign(state.colorMap, colorMap)
@@ -162,14 +162,15 @@ const assignTone = (id, tone) => {
   setLight(id, { tones: [...getLight(id).tones, tone] })
 }
 
+const decreaseRate = 0.9
 const dampenLights = () => {
   const { mode } = state
   if (mode === 'no-dampen') return
 
-  const decreasingRate = 0.9
   lightLoop().forEach(id => {
     const { r, g, b, busy, capacity, floor } = getLight(id)
-    capacity > floor && !busy && setLight(id, { ...changeIntensity({ r, g, b }, decreasingRate), capacity: capacity * decreasingRate })
+    // console.log(floor, capacity, capacity > floor)
+    capacity > floor && !busy && setLight(id, { ...changeIntensity({ r, g, b }, decreaseRate), capacity: capacity * decreaseRate })
   })
 }
 
@@ -308,6 +309,7 @@ module.exports = {
   zeroRgb,
   setLight,
   heartBeat,
+  randomRgb,
   slowIntro,
   lightLoop,
   emitLights,

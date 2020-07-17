@@ -6,7 +6,7 @@ module.exports = {
   lights: {},
   activeLights: [],
   lockedLights: [],
-  currentIntensity: 0.6,
+  currentIntensity: 1,
   dampenInterval: null,
   mode: '',
   colorMap: {}

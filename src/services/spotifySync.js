@@ -257,6 +257,7 @@ const handleExpiredAuth = () => {
 
 const handleSyncErrors = ({ error }) => {
   error === 'expired-auth' && handleExpiredAuth()
+  console.warn({error})
 }
 
 const sync = () => {

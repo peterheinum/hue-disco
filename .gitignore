@@ -1,4 +1,5 @@
 .env
+.env2
 node_modules/
 public/
 src/utils/spotifyAuth
