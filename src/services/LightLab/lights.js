@@ -162,7 +162,7 @@ const assignTone = (id, tone) => {
   setLight(id, { tones: [...getLight(id).tones, tone] })
 }
 
-const decreaseRate = 0.9
+const decreaseRate = 0.955
 const dampenLights = () => {
   const { mode } = state
   if (mode === 'no-dampen') return

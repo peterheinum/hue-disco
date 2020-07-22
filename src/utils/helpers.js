@@ -22,6 +22,8 @@ const objToArrayWithKeyAsId = obj => Object.keys(obj).map(key => ({ ...obj[key],
 const round = number => Math.round(number)
 const doubleRGB = (r, g, b) => [round(r), round(r), round(g), round(g), round(b), round(b)]
 
+const unique = arr => [...new Set(arr)]
+
 const request = async ({ options, method }) => {
   !options['headers'] && (options['headers'] = auth_headers())
   return new Promise((res, rej) => {
@@ -79,6 +81,7 @@ module.exports = {
   rand,
   round,
   sleep,
+  unique,
   request,
   isEqual, 
   setLight,
