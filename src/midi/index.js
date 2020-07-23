@@ -1,7 +1,7 @@
 const midi = require('midi')
 const input = new midi.Input()
 const { getRgbFromCssStr, flat, unique, rand } = require('../utils/helpers')
-const { setLight, randomRgb } = require('../services/LightLab/lights')
+const { setLight, randomRgb, tweenLightTo } = require('../services/LightLab/lights')
 console.log(input.getPortCount())
 input.getPortCount() > 0
   ? input.openPort(0)
@@ -88,35 +88,27 @@ const matchingArrays = (a, b) => a.filter((obj, i) => obj == b[i]).length === b.
 const availableLights = unique(flat(Object.keys(lightMap).map(key => lightMap[key])))
 const getRandLight = () => availableLights[rand(availableLights.length)]
 
-const getSomeLights = amount => {
-  const arr = []
-  for (let i = 0; i < amount; i++) {
-    arr.push(getRandLight())
-  }
-
-  return unique(arr)
-}
+const getSomeLights = (amount = 2) => unique(new Array(amount).map(getRandLight))
 
 const applyFn = lights => fn => lights.forEach(fn)
 
 let lastHit = null
 let state = 'normal'
 const sequence = []
+const pattern = ['t3', 't3', 't3', 't3', 't3', 't3']
 
-const changeStateOnSequence = () => {
-  const path = ['t3', 't3', 't3', 't3', 't3', 't3']
-  console.log(sequence)
-  if (matchingArrays(path, sequence)) {
-    state = state === 'wack' ? 'normal' : 'wack'
-  }
-}
+const sequenceMatchespattern = () => matchingArrays(pattern, sequence)
 
+const changeStateOnSequence = () => sequenceMatchespattern() && (state = state === 'wack' ? 'normal' : 'wack')
+
+/* hit two random colors for each hit */
 const craze = (amount = 2) => () => {
   const lights = getSomeLights(amount)
   const fn = id => setLight(id, randomRgb())
   applyFn(lights)(fn)
 }
 
+/* Let each pad/cymbal play it's color */
 const normalApply = () => (drum) => {
   const fn = id => drumColors[drum] && setLight(id, drumColors[drum])
   const lights = lightMap[drum]
@@ -126,11 +118,14 @@ const normalApply = () => (drum) => {
 /* 5 t3 in a row will activate wack  */
 const checkIfChangeState = () => (drum) => {
   sequence.push(drum)
-  if (sequence.length > 5) {
-    sequence.splice(0, 1)
-  }
-
+  sequence.length > path.length && sequence.splice(0, 1)
   changeStateOnSequence()
+}
+
+const tweenKick = (time) => (drum) => {
+  const fn = id => tweenLightTo(drumColors[drum], id, time)
+  const lights = lightMap[drum]
+  applyFn(lights)(fn)
 }
 
 const handleMidiInput = (time, [n, channel, x]) => {
@@ -140,9 +135,16 @@ const handleMidiInput = (time, [n, channel, x]) => {
     [n == 137, checkIfChangeState],
     [state == 'wack', craze],
     [state === 'normal', normalApply],
+    [state === 'normal', tweenKick, time]
 
     /* Two snares in a row */
-    [state === 'normal' && n == 137 && lastHit == drum && drum == 'snare', craze],
+    [
+      state === 'normal'
+      && n == 137
+      && lastHit == drum
+      && drum == 'snare',
+      craze
+    ],
   ]
 
   fns.filter(([bool]) => bool)
