@@ -76,12 +76,7 @@ const randomFromArray = array => array[rand(array.length)]
 
 const callStack = ([fn, ...rest]) => fn().then(() => rest.length && callStack(rest))
 
-const promisify = fn => new Promise(res => fn() && res())
-
-// const promisify = fn => {
-//   fn() 
-//   return Promise.resolve()
-// }
+const promisify = fn => Promise.resolve(fn())
 
 module.exports = {
   int,
