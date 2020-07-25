@@ -3,6 +3,7 @@ const input = new midi.Input()
 const { getRgbFromCssStr, flat, unique, rand } = require('../utils/helpers')
 const { setLight, randomRgb, tweenLightTo } = require('../services/LightLab/lights')
 console.log(input.getPortCount())
+console.log('ye')
 input.getPortCount() > 0
   ? input.openPort(0)
   : console.log('no midi connected')
@@ -51,38 +52,38 @@ const drumColors = {
 }
 
 /* Home */
-// const lightMap = {
-//     // 4 hi hat foot
-//     snare: [3],  
-//     t1: [3],  
-//     t2: [5],  
-//     t3: [6], 
-//     kick: [1],   
-//     openCrash: [1],
-//     openRide: [1], 
+const lightMap = {
+    // 4 hi hat foot
+    snare: [3],  
+    t1: [3],  
+    t2: [5],  
+    t3: [6], 
+    kick: [1],   
+    openCrash: [1],
+    openRide: [1], 
 
-//     // '40': maxBlue, 
-//     // '46': maxRed, // open hi hat
-//     // '51': halfRed, //ride 
-// }
+    // '40': maxBlue, 
+    // '46': maxRed, // open hi hat
+    // '51': halfRed, //ride 
+}
 
 /* Elias place */
-const lightMap = {
-  // 4 hi hat foot
-  snare: [5],
-  t1: [7],
-  t2: [8],
-  t3: [4],
-  kick: [6],
-  openCrash: [4],
-  openRide: [5],
-  openHiHat: [8]
+// const lightMap = {
+//   // 4 hi hat foot
+//   snare: [5],
+//   t1: [7],
+//   t2: [8],
+//   t3: [4],
+//   kick: [6],
+//   openCrash: [4],
+//   openRide: [5],
+//   openHiHat: [8]
 
-  // '40': maxBlue, 
-  // '46': maxRed, // open hi hat
-  // '49': maxBlue, 
-  // '51': halfRed, //ride 
-}
+//   // '40': maxBlue, 
+//   // '46': maxRed, // open hi hat
+//   // '49': maxBlue, 
+//   // '51': halfRed, //ride 
+// }
 
 const matchingArrays = (a, b) => a.filter((obj, i) => obj == b[i]).length === b.length
 const availableLights = unique(flat(Object.keys(lightMap).map(key => lightMap[key])))
@@ -135,7 +136,7 @@ const handleMidiInput = (time, [n, channel, x]) => {
     [n == 137, checkIfChangeState],
     [state == 'wack', craze],
     [state === 'normal', normalApply],
-    [state === 'normal', tweenKick, time]
+    [state === 'normal' && drum === 'kick', tweenKick, time]
 
     /* Two snares in a row */
     [
@@ -147,7 +148,10 @@ const handleMidiInput = (time, [n, channel, x]) => {
     ],
   ]
 
-  fns.filter(([bool]) => bool)
+  fns.filter(([bool]) => {
+    console.log(bool)
+    return bool
+  })
     .forEach(([__, fn, params]) => fn(params)(drum))
 
   lastHit = drum
