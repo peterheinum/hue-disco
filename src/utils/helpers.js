@@ -72,6 +72,16 @@ const shadeRGBColor = (color, percent) => {
   return 'rgb(' + (Math.round((t - R) * p) + R) + ',' + (Math.round((t - G) * p) + G) + ',' + (Math.round((t - B) * p) + B) + ')'
 }
 
+const randomFromArray = array => array[rand(array.length)]
+
+const callStack = ([fn, ...rest]) => fn().then(() => rest.length && callStack(rest))
+
+const promisify = fn => new Promise(res => fn() && res())
+
+// const promisify = fn => {
+//   fn() 
+//   return Promise.resolve()
+// }
 
 module.exports = {
   int,
@@ -86,10 +96,13 @@ module.exports = {
   isEqual, 
   setLight,
   doubleRGB,
+  promisify,
+  callStack,
   emptyArray, 
   baseHueUrl,
   baseGroupUrl,
   shadeRGBColor,
+  randomFromArray,
   requireUncached,
   getRgbFromCssStr,
   objToArrayWithKeyAsId,

@@ -1,9 +1,12 @@
 const midi = require('midi')
 const input = new midi.Input()
-const { getRgbFromCssStr, flat, unique, rand } = require('../utils/helpers')
-const { setLight, randomRgb, tweenLightTo } = require('../services/LightLab/lights')
+const { getRgbFromCssStr, flat, unique, rand, randomFromArray, callStack, sleep, promisify } = require('../utils/helpers')
+const { setLight, randomRgb, tweenLightTo, changeIntensity } = require('../services/LightLab/lights')
+
+const wait = sleep(1000)
 console.log(input.getPortCount())
 console.log('ye')
+
 input.getPortCount() > 0
   ? input.openPort(0)
   : console.log('no midi connected')
@@ -102,6 +105,11 @@ const sequenceMatchespattern = () => matchingArrays(pattern, sequence)
 
 const changeStateOnSequence = () => sequenceMatchespattern() && (state = state === 'wack' ? 'normal' : 'wack')
 
+const rows = [[1, 6, 3], [6, 1, 5], [3, 1, 5], [5, 1, 3]]
+const getRandomRow = () =>  randomFromArray(rows)
+
+/* On Midi input case handlers */
+
 /* hit two random colors for each hit */
 const craze = (amount = 2) => () => {
   const lights = getSomeLights(amount)
@@ -123,10 +131,23 @@ const checkIfChangeState = () => (drum) => {
   changeStateOnSequence()
 }
 
+/*  */
 const tweenKick = (time) => (drum) => {
   const fn = id => tweenLightTo(drumColors[drum], id, time)
   const lights = lightMap[drum]
   applyFn(lights)(fn)
+}
+
+const addDelayBetween = (fns) => flat(fns.map(fn => [fn, wait]))
+
+/* One two three each less than one another */
+const bounceKick = () => (drum) => {
+  const mainColor = drumColors[drum]
+  const colors = [mainColor, changeIntensity(mainColor, 0.65), changeIntensity(mainColor, 0.30)]
+  const lights = getRandomRow()
+  const fns = lights.map((id, i) => promisify(() => setLight(id, colors[i])))
+  const fnsWithWait = addDelayBetween(fns)
+  callStack(fnsWithWait)
 }
 
 const handleMidiInput = (time, [n, channel, x]) => {

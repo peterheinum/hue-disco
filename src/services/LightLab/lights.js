@@ -158,9 +158,7 @@ const withLeastTones = () => {
   return { id }
 }
 
-const assignTone = (id, tone) => {
-  setLight(id, { tones: [...getLight(id).tones, tone] })
-}
+const assignTone = (id, tone) => setLight(id, { tones: [...getLight(id).tones, tone] })
 
 const decreaseRate = 0.955
 const dampenLights = () => {
@@ -183,7 +181,8 @@ const init = () => {
   }, 50)
 }
 
-
+/* This is cooler */
+// const stackFunctions = ([fn, ...stack]) => fn().then(() => stack.length && stackFunctions(stack))
 
 const stackFunctions = async stack => {
   for (let i = 0; i < stack.length; i++) {
