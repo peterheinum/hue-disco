@@ -93,7 +93,7 @@ const getRandLight = () => availableLights[rand(availableLights.length)]
 
 const getSomeLights = (amount = 2) => unique(new Array(amount).map(getRandLight))
 
-const applyFn = lights => fn => lights.forEach(fn)
+const applyFn = lights => fn => lights.length && lights.forEach(fn)
 
 let lastHit = null
 let state = 'normal'
@@ -101,8 +101,6 @@ const sequence = []
 const pattern = ['t3', 't3', 't3', 't3', 't3', 't3']
 
 const sequenceMatchespattern = () => matchingArrays(pattern, sequence)
-
-const changeStateOnSequence = () => sequenceMatchespattern() && (state = state === 'wack' ? 'normal' : 'wack')
 
 const rows = [[1, 6, 3], [6, 1, 5], [3, 1, 5], [5, 1, 3]]
 const getRandomRow = () =>  randomFromArray(rows)
@@ -126,8 +124,8 @@ const normalApply = () => (drum) => {
 /* 5 t3 in a row will activate wack  */
 const checkIfChangeState = () => (drum) => {
   sequence.push(drum)
-  sequence.length > path.length && sequence.splice(0, 1)
-  changeStateOnSequence()
+  sequence.length > pattern.length && sequence.splice(0, 1)
+  sequenceMatchespattern() && (state = state === 'wack' ? 'normal' : 'wack')
 }
 
 /*  */
@@ -137,11 +135,10 @@ const tweenKick = (time) => (drum) => {
   applyFn(lights)(fn)
 }
 
-
-
 /* One two three each less than one another */
-const bounceKick = () => (drum) => {
+const bounceColor = () => (drum) => {
   const color = drumColors[drum]
+  if(!color) return
   const lights = getRandomRow()
   const stack = createBounceCallstack(lights, color)
   callStack(stack)
@@ -149,27 +146,18 @@ const bounceKick = () => (drum) => {
 
 const handleMidiInput = (time, [n, channel, x]) => {
   const drum = channelMap[channel]
-
+  if(!lightMap[drum] || n !== 137) return
   const fns = [
     [n == 137, checkIfChangeState],
     [state == 'wack', craze],
     [state === 'normal', normalApply],
-    [state === 'normal' && drum === 'kick', tweenKick, time]
+    [state === 'bounce', bounceColor]
 
     /* Two snares in a row */
-    [
-      state === 'normal'
-      && n == 137
-      && lastHit == drum
-      && drum == 'snare',
-      craze
-    ],
+    // [state === 'normal' && n == 137 && lastHit == drum && drum == 'snare', craze],
   ]
 
-  fns.filter(([bool]) => {
-    console.log(bool)
-    return bool
-  })
+  fns.filter(([bool]) => bool)
     .forEach(([__, fn, params]) => fn(params)(drum))
 
   lastHit = drum
