@@ -1,9 +1,8 @@
 const midi = require('midi')
 const input = new midi.Input()
 const { getRgbFromCssStr, flat, unique, rand, randomFromArray, callStack, sleep, promisify } = require('../utils/helpers')
-const { setLight, randomRgb, tweenLightTo, changeIntensity } = require('../services/LightLab/lights')
+const { setLight, randomRgb, tweenLightTo, changeIntensity, createBounceCallstack } = require('../services/LightLab/lights')
 
-const wait = sleep(1000)
 console.log(input.getPortCount())
 console.log('ye')
 
@@ -138,16 +137,14 @@ const tweenKick = (time) => (drum) => {
   applyFn(lights)(fn)
 }
 
-const addDelayBetween = (fns) => flat(fns.map(fn => [fn, wait]))
+
 
 /* One two three each less than one another */
 const bounceKick = () => (drum) => {
-  const mainColor = drumColors[drum]
-  const colors = [mainColor, changeIntensity(mainColor, 0.65), changeIntensity(mainColor, 0.30)]
+  const color = drumColors[drum]
   const lights = getRandomRow()
-  const fns = lights.map((id, i) => promisify(() => setLight(id, colors[i])))
-  const fnsWithWait = addDelayBetween(fns)
-  callStack(fnsWithWait)
+  const stack = createBounceCallstack(lights, color)
+  callStack(stack)
 }
 
 const handleMidiInput = (time, [n, channel, x]) => {

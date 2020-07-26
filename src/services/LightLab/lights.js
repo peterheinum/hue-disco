@@ -1,4 +1,4 @@
-const { getRgbFromCssStr, rand, doubleRGB, round, sleep } = require('../../utils/helpers')
+const { getRgbFromCssStr, rand, doubleRGB, round, promisify, flat, wait, callStack, sleep, randomFromArray } = require('../../utils/helpers')
 const convertPitchToNote = require('../../utils/convertPitchToNote')
 const { eventHub } = require('../../utils/eventHub')
 const { interpolateRgb } = require('d3-interpolate')
@@ -160,7 +160,7 @@ const withLeastTones = () => {
 
 const assignTone = (id, tone) => setLight(id, { tones: [...getLight(id).tones, tone] })
 
-const decreaseRate = 0.955
+const decreaseRate = 0.985
 const dampenLights = () => {
   const { mode } = state
   if (mode === 'no-dampen') return
@@ -178,7 +178,7 @@ const init = () => {
   state.dampenInterval = setInterval(() => {
     state.hasSocket && emitLights()
     dampenLights()
-  }, 50)
+  }, 30)
 }
 
 /* This is cooler */
@@ -304,6 +304,36 @@ const infiniteTween = ([dark, next, intervalLength = 500]) => {
   }, intervalLength + 500)
 }
 
+const addDelayBetween = (fns) => flat(fns.map(fn => [fn, wait]))
+
+const createLowerColors = (color, amount, floor = 0.1) => {
+  const rate = Math.abs((1-floor)/amount - 1)
+  
+  const colors = [color]
+  for (let i = 1; i < amount; i++) {
+    colors.push(changeIntensity(color, (rate / i)))
+  }
+  
+  console.log(colors)
+  return colors
+}
+
+const pSetLight = (id, color) => {
+  setLight(id, color)
+  return sleep(25)
+}
+
+const createBounceCallstack = (lights, color) => {
+  const colors = createLowerColors(color, lights.length)
+
+  const fns = lights.map((id, i) => () => pSetLight(id, colors[i]))
+  return addDelayBetween(fns)
+}
+
+// const rows = [[1, 6, 3], [6, 1, 5], [3, 1, 5], [5, 1, 3]]
+const rows = [[5, 1, 2], [2, 1, 5], [4, 1, 2], [1, 2, 4]]
+const getRandomRow = () =>  randomFromArray(rows)
+
 module.exports = {
   zeroRgb,
   setLight,
@@ -318,4 +348,5 @@ module.exports = {
   stackFunctions,
   changeIntensity,
   configurateVariables,
+  createBounceCallstack,
 }

@@ -1,6 +1,7 @@
+const axios = require('axios')
 const fetch = require('node-fetch')
 const _request = require('request')
-const axios = require('axios')
+const { promisify } = require('util')
 
 const hueUserName = process.env.HUE_CLIENT_KEY
 
@@ -74,15 +75,20 @@ const shadeRGBColor = (color, percent) => {
 
 const randomFromArray = array => array[rand(array.length)]
 
-const callStack = ([fn, ...rest]) => fn().then(() => rest.length && callStack(rest))
+const callStack = ([fn, ...rest]) => {
+  console.log(fn.toString())
+  fn().then(() => rest.length && callStack(rest))
+}
 
-const promisify = fn => Promise.resolve(fn())
+
+const wait = () => sleep(500)
 
 module.exports = {
   int,
   avg,
   get,
   flat,
+  wait,
   rand,
   round,
   sleep,
