@@ -75,13 +75,11 @@ const shadeRGBColor = (color, percent) => {
 
 const randomFromArray = array => array[rand(array.length)]
 
-const callStack = ([fn, ...rest]) => {
-  console.log(fn.toString())
-  fn().then(() => rest.length && callStack(rest))
-}
-
+const callStack = ([fn, ...rest]) => fn().then(() => rest.length && callStack(rest))
 
 const wait = () => sleep(500)
+
+const findHandler = (key, dictionary) => dictionary.find(obj => obj[0] == key) || [null, null]
 
 module.exports = {
   int,
@@ -99,8 +97,9 @@ module.exports = {
   doubleRGB,
   promisify,
   callStack,
-  emptyArray, 
+  emptyArray,
   baseHueUrl,
+  findHandler, 
   baseGroupUrl,
   shadeRGBColor,
   randomFromArray,

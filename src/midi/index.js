@@ -125,7 +125,7 @@ const normalApply = () => (drum) => {
 const checkIfChangeState = () => (drum) => {
   sequence.push(drum)
   sequence.length > pattern.length && sequence.splice(0, 1)
-  sequenceMatchespattern() && (state = state === 'wack' ? 'normal' : 'wack')
+  sequenceMatchespattern() && (state = state === 'bounce' ? 'normal' : 'bounce')
 }
 
 /*  */

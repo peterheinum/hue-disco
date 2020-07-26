@@ -1,10 +1,21 @@
-const { getRgbFromCssStr, rand, doubleRGB, round, promisify, flat, wait, callStack, sleep, randomFromArray } = require('../../utils/helpers')
 const convertPitchToNote = require('../../utils/convertPitchToNote')
 const { eventHub } = require('../../utils/eventHub')
 const { interpolateRgb } = require('d3-interpolate')
 const state = require('../../stores/globalState')
 const { get, set } = require('lodash')
-const eventhub = require('../../utils/eventHub')
+const { 
+  getRgbFromCssStr, 
+  rand, 
+  doubleRGB, 
+  round, 
+  callStack, 
+  flat, 
+  wait, 
+  sleep, 
+  randomFromArray, 
+  findHandler,
+  unique,
+} = require('../../utils/helpers')
 
 /* UTILS */
 const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
@@ -89,22 +100,16 @@ const configurateVariables = () => {
   })
 
   Object.assign(state.colorMap, colorMap)
-  // shuffle(Object.keys(colorMap)).forEach(tone => {
+
   Object.keys(colorMap).forEach(tone => {
     const { id } = withLeastTones()
     assignTone(id, tone)
   })
 }
 
-const isActive = id => state.activeLights.length ? state.activeLights.includes(id) : true
-
-const last = {}
-
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
-  // const colorMessage = lightLoop().filter(hasChanged).map(id => {
     const { r, g, b } = changeIntensity(getLight(id), state.currentIntensity)
-    last[id] = { r, g, b }
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
 
@@ -123,7 +128,9 @@ const tweenLightTo = (rgb, id, ms = 5000) => {
         const [r, g, b] = getRgbFromCssStr(interpolation(1))
         setLight(id, { r, g, b, busy: false })
         clearInterval(_interval)
-        resolve()
+        setTimeout(() => {
+          resolve()
+        }, 20)
       }
 
       i += 20 / ms
@@ -138,7 +145,6 @@ const heartBeatAll = () => {
     heartBeat(id)
   })
 }
-
 
 const getTonesForLight = id => getLight(id).tones
 
@@ -160,14 +166,14 @@ const withLeastTones = () => {
 
 const assignTone = (id, tone) => setLight(id, { tones: [...getLight(id).tones, tone] })
 
-const decreaseRate = 0.975
+// const decreaseRate = 0.99 //Chill
+const decreaseRate = 0.85
 const dampenLights = () => {
   const { mode } = state
   if (mode === 'no-dampen') return
 
   lightLoop().forEach(id => {
     const { r, g, b, busy, capacity, floor } = getLight(id)
-    // console.log(floor, capacity, capacity > floor)
     capacity > floor && !busy && setLight(id, { ...changeIntensity({ r, g, b }, decreaseRate), capacity: capacity * decreaseRate })
   })
 }
@@ -181,16 +187,6 @@ const init = () => {
   }, 30)
 }
 
-/* This is cooler */
-// const stackFunctions = ([fn, ...stack]) => fn().then(() => stack.length && stackFunctions(stack))
-
-const stackFunctions = async stack => {
-  for (let i = 0; i < stack.length; i++) {
-    await stack[i]()
-  }
-
-  return Promise.resolve()
-}
 
 const transfer = (from, to, ms = 500) => {
   tweenLightTo(zeroRgb, from, ms)
@@ -198,12 +194,14 @@ const transfer = (from, to, ms = 500) => {
 }
 
 const heartBeat = id => {
-  const a = () => tweenLightTo(changeIntensity(maxRed, 0.7), id, 200)
-  const b = () => tweenLightTo(zeroRgb, id, 100)
-  const c = () => tweenLightTo(maxRed, id, 200)
-  const d = () => tweenLightTo(zeroRgb, id, 400)
+  const fns = [
+    () => tweenLightTo(changeIntensity(maxRed, 0.7), id, 200),
+    () => tweenLightTo(zeroRgb, id, 100),
+    () => tweenLightTo(maxRed, id, 200),
+    () => tweenLightTo(zeroRgb, id, 400) 
+  ]
 
-  stackFunctions([a, b, c, d])
+  callStack(fns)
 }
 
 
@@ -213,13 +211,15 @@ eventHub.on('segment', ([segment, index]) => {
   }
 
   const { pitches, duration, loudness_start, loudness_max, loudness_max_time } = segment
+  if(loudness_max_time < 60 || duration < 80 || loudness_max > -5) return 
+  console.log({duration})
+  console.log({loudness_max})
+  console.log({loudness_max_time})
   const tone = convertPitchToNote(pitches)
   const [r, g, b] = getRgbFromCssStr(getColorsForTone(tone))
   const { id } = getLightsForTone(tone)
 
-  duration > 1000
-    ? tweenLightTo({ r, g, b }, id, duration)
-    : setLight(id, { r, g, b, capacity: 100 })
+  setLight(id, { r, g, b, capacity: 100 })
 })
 
 const getDefaultColorForLight = (id, index) => {
@@ -235,7 +235,7 @@ const randomSlowIntro = (index, distanceToNext) => {
     : lightLoop().forEach(id => tweenLightTo(id % 2 !== temp ? randomRgb() : zeroRgb, id, distanceToNext))
 }
 
-const slowIntro = (index, distanceToNext) => {
+const slowIntro = async (index, distanceToNext) => {
   const temp = index % 2 == 0 ? 0 : 1
   index % 2 == 0
     ? lightLoop().forEach(id => tweenLightTo(id % 2 === temp ? zeroRgb : getDefaultColorForLight(id, index % 3 == 0 ? 1 : 0), id, distanceToNext))
@@ -246,37 +246,64 @@ eventHub.on('bar', ([bar, index, distanceToNext]) => {
   const { mode } = state
 
   const dictionary = [
+    ['bounce', bounce],
     ['flashes', removeAllBusy],
     ['slow-intro', () => slowIntro(index, distanceToNext)],
     ['random-slow-intro', () => randomSlowIntro(index, distanceToNext)],
   ]
-  //Enabled for flashes to be on
-  removeAllBusy()
-  index % 2 === 0 && heartBeatAll()
-  // const [__, fn] = dictionary.find(([name]) => name === mode)
-  // fn && fn()
-  // const fn = () => slowIntro(index, distanceToNext)
-  // fn()
+  const [__, handler] = findHandler(mode, dictionary)
   
+  if (handler !== null) {
+    handler()
+  }
+  index % 2 == 0 && heartBeatAll()
 })
 
 eventHub.on('section', ([section, index]) => {
-  // const modes = ['slow-intro'] //, 'flashes']
-  const modes = ['flashes'] 
+  const modes = ['slow-intro', 'random-slow-intro', 'bounce', 'flashes'] 
+  // const modes = ['flashes'] 
   const { mode } = state
-  set(state, 'mode', modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)])
+  const newMode = modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)]
+  console.log({newMode})
+  // set(state, 'mode', newMode)
+  set(state, 'mode', 'flashes')
 })
 
-let i = 0
+const raiseAll = () => lightLoop().map(getLight).forEach(light => {
+  setLight(light.id, changeIntensity(getRgb(light), 1.05))
+})
+
+const getThreeLights = () => {
+  const lights = []
+  for (let i = 0; i < 3; i++) {
+    lights.push(randomFromArray(lightLoop()))    
+  }
+
+  /* remove this when group is changed */
+  return lightLoop()
+  return unique(lights)
+}
+
+const bounce = () => {
+  const lights = getThreeLights()
+  const color = randomRgb()
+  const fns = createBounceCallstack(lights, color)
+  callStack(fns)
+}
+
 eventHub.on('beat', ([beat, index]) => {
   const { mode } = state
-  if (mode === 'escapade') {
-    lightLoop().forEach(id => setLight(id, id === i ? maxRed : zeroRgb))
-    i++
+  
+  const dictionary = [
+    // ['flashes', raiseAll]
+  ]
+  
+  const [__, handler] = findHandler(mode, dictionary)
+  
+  if(handler) {
+    handler()
   }
 })
-
-
 
 const setSlowIntro = () => setMode('slow-intro')
 const setFlashes = () => setMode('flashes')
@@ -314,7 +341,6 @@ const createLowerColors = (color, amount, floor = 0.1) => {
     colors.push(changeIntensity(color, (rate / i)))
   }
   
-  console.log(colors)
   return colors
 }
 
@@ -345,7 +371,6 @@ module.exports = {
   heartBeatAll,
   dampenLights,
   tweenLightTo,
-  stackFunctions,
   changeIntensity,
   configurateVariables,
   createBounceCallstack,
