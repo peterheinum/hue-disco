@@ -184,13 +184,12 @@ const init = () => {
   state.dampenInterval = setInterval(() => {
     state.hasSocket && emitLights()
     dampenLights()
-  }, 30)
+  }, 50)
 }
 
 
 const transfer = (from, to, ms = 500) => {
-  tweenLightTo(zeroRgb, from, ms)
-  tweenLightTo(getRgb(getLight(from)), to, ms)
+  tweenLightTo(zeroRgb, from, ms).then(() => tweenLightTo(getRgb(getLight(from)), to, ms))
 }
 
 const heartBeat = id => {
@@ -256,7 +255,7 @@ eventHub.on('bar', ([bar, index, distanceToNext]) => {
   if (handler !== null) {
     handler()
   }
-  index % 2 == 0 && heartBeatAll()
+  // index % 2 == 0 && heartBeatAll()
 })
 
 eventHub.on('section', ([section, index]) => {

@@ -316,8 +316,8 @@ eventHub.on('quickStart', () => {
   getGroups().then(groups => {
 
     /* remove this when group is changed */
-    globalState.currentGroup = groups[1]
-    // globalState.currentGroup = groups[0]
+    // globalState.currentGroup = groups[1]
+    globalState.currentGroup = groups[0]
     
     getGroupsAndStopStreams()
     .then(startStream)
@@ -327,6 +327,6 @@ eventHub.on('quickStart', () => {
   })
 })
 
-quickStartIfPossible()
-// eventHub.emit('quickStart')
+// quickStartIfPossible()
+eventHub.emit('quickStart')
 

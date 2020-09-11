@@ -3,9 +3,6 @@ const input = new midi.Input()
 const { getRgbFromCssStr, flat, unique, rand, randomFromArray, callStack, sleep, promisify } = require('../utils/helpers')
 const { setLight, randomRgb, tweenLightTo, changeIntensity, createBounceCallstack } = require('../services/LightLab/lights')
 
-console.log(input.getPortCount())
-console.log('ye')
-
 input.getPortCount() > 0
   ? input.openPort(0)
   : console.log('no midi connected')
@@ -145,6 +142,7 @@ const bounceColor = () => (drum) => {
 }
 
 const handleMidiInput = (time, [n, channel, x]) => {
+  console.log(n, channel, x)
   const drum = channelMap[channel]
   if(!lightMap[drum] || n !== 137) return
   const fns = [
