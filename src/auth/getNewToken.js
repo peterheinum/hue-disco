@@ -28,7 +28,6 @@ const getNewToken = async () => {
   }
 
   const response = await request({ options, method: 'post' })
-  console.log(response)
   eventHub.emit('authRecieved', response)
 }
 

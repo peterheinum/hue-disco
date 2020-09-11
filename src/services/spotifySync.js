@@ -146,7 +146,7 @@ const fixSync = () => {
   const initial_track_progress = progress_ms + tock
   const initial_progress_ms = Date.now()
   Object.assign(track, {
-    progress_ms: progress_ms + tock + 500,
+    progress_ms: progress_ms + tock + 550,
     initial_track_progress,
     initial_progress_ms
   })
@@ -231,12 +231,6 @@ const calculateAvarageLoudnessMax = () => {
   //TODO, SPLIT AVARAGE INTO THE DIFFERENT SEGMENTS FOR BETTER COMPARISON
   const total = track.segments.map(({ loudness_max }) => loudness_max).reduce((acc, cur) => acc += cur, 0)
   avarage = total/track.segments.length
-  console.log(avarage)
-  console.log(avarage)
-  console.log(avarage)
-  console.log(avarage)
-  console.log(avarage)
-  console.log(avarage)
 }
 
 const startSongSync = () => {
@@ -303,7 +297,7 @@ const getStoredSpotifyAuthAndStartPoll = () => {
   const init = () => {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    configStateAndConnectToHue()
+    configStateAndConnectToHue('./lightLab/visualConsole')
   }
 
   Date.now() - timestamp < 3600000 ? init() : console.log('get spotify auth bruh')
@@ -312,12 +306,10 @@ const getStoredSpotifyAuthAndStartPoll = () => {
 const configStateAndConnectToHue = (path) => {
   const { getGroups } = require('../services/groupHandler')
   const { startStream, getGroupsAndStopStreams } = require('../services/socket')
-  const { setState, getState } = require('../stores/globalState')
+  const { setState } = require('../stores/globalState')
   
-  console.log(path)
   getGroups().then(groups => {
     setState('currentGroup', groups[1])
-    console.log(getState('currentGroup'))
     getGroupsAndStopStreams()
     .then(startStream)
     .then(() => require('./lightLab/lights'))
@@ -330,6 +322,6 @@ const main = (startCase) => ({
   lights: () => configStateAndConnectToHue(),
   keyboard: () => configStateAndConnectToHue('./lightLab/keyboard'),
   spotify: () => getStoredSpotifyAuthAndStartPoll(),
-  console: () => configStateAndConnectToHue('./lightLab/console'),
+  console: () => configStateAndConnectToHue('./lightLab/visualConsole'),
 }[startCase]())
 main('spotify')

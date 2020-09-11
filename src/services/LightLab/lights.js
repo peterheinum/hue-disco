@@ -17,6 +17,8 @@ const {
   unique,
 } = require('../../utils/helpers')
 const {setState, getState, assignState, setLight} = require('../../stores/globalState')
+const {find, pipe, includes, path} = require('ramda')
+const {getVolumeOfSegment} = require('./visualConsole')
 
 /* UTILS */
 const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
@@ -76,7 +78,6 @@ const colorMap = {
 }
 
 eventHub.on('setColors', colorMap => {
-  console.log('new color map ', colorMap)
   setState('colorMap', colorMap)
 })
 
@@ -109,16 +110,13 @@ const configurateVariables = () => {
     const { id } = withLeastTones()
     assignTone(id, tone)
   })
-  console.log(getState('lights'))
 }
 
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
     const { r, g, b } = changeIntensity(getLight(id), getState('currentIntensity'))
-    console.log({ r, g, b })
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
-  console.log(colorMessage)
   eventHub.emit('emitLight', colorMessage)
 }
 
@@ -156,14 +154,12 @@ const getTonesForLight = id => getLight(id).tones
 
 const getLightsForTone = tone => {
   let light = null
-  console.log('tone', tone)
   lightLoop().forEach(id => {
     const tones = getTonesForLight(id)
     if (tones.includes(tone)) {
       light = getLight(id)
     }
   })
-  console.log('tone returns', light)
   return light
 }
 
@@ -182,7 +178,6 @@ const dampenLights = () => {
 
   lightLoop().forEach(id => {
     const { r, g, b, busy, capacity, floor } = getLight(id)
-    console.log({r, g, b})
     capacity > floor && !busy && setLight(id, { ...changeIntensity({ r, g, b }, decreaseRate), capacity: capacity * decreaseRate })
   })
 }
@@ -212,19 +207,30 @@ const heartBeat = id => {
   callStack(fns)
 }
 
+const sum = (acc, cur) => acc + cur
+const getAvg = (arr) => arr.reduce(sum) / arr.length
+
+const currentVolumes = []
+
+const segmentWorthPlaying = (segment) => {
+  const volume = getVolumeOfSegment(segment)
+  currentVolumes.unshift(volume)
+  if (currentVolumes.length > 5) currentVolumes.pop()
+  const avg = getAvg(currentVolumes)
+  return volume * 0.95 > avg
+}
 
 eventHub.on('segment', ([segment, index]) => {
   if (getState('mode') !== 'flashes' || !getState('dampenInterval')) {
     return
   }
 
-  const { pitches, duration, loudness_start, loudness_max, loudness_max_time } = segment
-  if(loudness_max_time < 60 || duration < 80 || loudness_max > -5) return 
+  const { pitches } = segment
+  if(!segmentWorthPlaying(segment)) return
   const tone = convertPitchToNote(pitches)
   const [r, g, b] = getRgbFromCssStr(getColorsForTone(tone))
   const { id } = getLightsForTone(tone)
   setLight(id, { r, g, b, capacity: 100 })
-  console.log(getState('lights.' + id))
 })
 
 const getDefaultColorForLight = (id, index) => {
@@ -269,7 +275,6 @@ eventHub.on('section', ([section, index]) => {
   // const modes = ['flashes'] 
   const { mode } = state
   const newMode = modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)]
-  console.log({newMode})
   setState('mode', 'flashes')
 })
 

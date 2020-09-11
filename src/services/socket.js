@@ -89,7 +89,6 @@ const connectToSocket = () => {
       console.log('connected')
       sendInitMessage(socket)     
       eventHub.on('emitLight', lights => {
-        console.log(lights)
         const message = formatSocketMessage(lights)
         getState('hasSocket') && socket.send(message)
       })

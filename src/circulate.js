@@ -64,7 +64,6 @@ const setLight = async({ id, hue, bri }) => {
   const body = { on: true, sat: 204, hue, bri: 250 }
   const method = 'PUT'
   const [status] = await get({ url, body, method })
-  console.log(status)
   return Promise.resolve()
 }
 

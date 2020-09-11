@@ -17,7 +17,6 @@ const createGroup = async lights => {
 
   try {
     const res = await get({ url, body, method })
-    console.log(res)
   } catch (error) {
     return error
   }

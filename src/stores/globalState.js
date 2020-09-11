@@ -22,7 +22,6 @@ const mutations = () => {
   const assignState = (obj) => Object.assign(state, obj)
   
   const setLight = (id, value) => {
-    console.log('setLight', id, value)
     state['lights'][id] = { ...state['lights'][id], ...value, capacity: 100 }
   }
 
