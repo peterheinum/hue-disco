@@ -1,7 +1,7 @@
 const midi = require('midi')
 const input = new midi.Input()
-const { getRgbFromCssStr, flat, unique, rand, randomFromArray, callStack, sleep, promisify } = require('../utils/helpers')
-const { setLight, randomRgb, tweenLightTo, changeIntensity, createBounceCallstack } = require('../services/LightLab/lights')
+const { getRgbFromCssStr, flat, unique, rand, randomFromArray, callStack, sleep } = require('../utils/helpers')
+const { setLight, randomRgb, tweenLightTo, changeIntensity, createBounceCallstack } = require('../services/lightLab/lights')
 
 input.getPortCount() > 0
   ? input.openPort(0)

@@ -257,7 +257,7 @@ const handleExpiredAuth = () => {
 
 const handleSyncErrors = ({ error }) => {
   error === 'expired-auth' && handleExpiredAuth()
-  console.warn({error})
+  error && console.warn({error})
 }
 
 const sync = () => {
@@ -293,40 +293,43 @@ eventHub.on('authRecieved', recievedAuth => {
 
 
 //UTILITIES MADE FOR FASTER DEVELOPMENT
-const quickStartIfPossible = () => {
+const getStoredSpotifyAuthAndStartPoll = () => {
   const filePath = path.resolve(`${__dirname}/../utils/spotifyAuth`)
   const json = fs.readFileSync(filePath)
   if (!json.toString()) return
 
   const { auth: _auth, timestamp } = JSON.parse(json) ? JSON.parse(json) : {}
   if (!timestamp) return
-  if (Date.now() - timestamp < 3600000) {
+  const init = () => {
     Object.assign(auth, { ..._auth, timestamp })
     eventHub.emit('startPingInterval')
-    eventHub.emit('quickStart')
+    configStateAndConnectToHue()
   }
+
+  Date.now() - timestamp < 3600000 ? init() : console.log('get spotify auth bruh')
 }
 
-eventHub.on('quickStart', () => {
+const configStateAndConnectToHue = (path) => {
   const { getGroups } = require('../services/groupHandler')
   const { startStream, getGroupsAndStopStreams } = require('../services/socket')
-  const globalState = require('../stores/globalState')
+  const { setState, getState } = require('../stores/globalState')
   
-  console.log('quickStart')
+  console.log(path)
   getGroups().then(groups => {
-
-    /* remove this when group is changed */
-    // globalState.currentGroup = groups[1]
-    globalState.currentGroup = groups[0]
-    
+    setState('currentGroup', groups[1])
+    console.log(getState('currentGroup'))
     getGroupsAndStopStreams()
     .then(startStream)
-    .then(() => require('./LightLab/lights'))
-    .then(() => require('./LightLab/keyboard'))
-    .then(() => require('../midi'))
+    .then(() => require('./lightLab/lights'))
+    .then(() => path && require(path))
   })
-})
+}
 
-// quickStartIfPossible()
-eventHub.emit('quickStart')
-
+const main = (startCase) => ({
+  midi: () => configStateAndConnectToHue('../midi'),
+  lights: () => configStateAndConnectToHue(),
+  keyboard: () => configStateAndConnectToHue('./lightLab/keyboard'),
+  spotify: () => getStoredSpotifyAuthAndStartPoll(),
+  console: () => configStateAndConnectToHue('./lightLab/console'),
+}[startCase]())
+main('spotify')

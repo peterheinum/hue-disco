@@ -3,7 +3,7 @@ require('dotenv').config({ path: __dirname + '../../.env' })
 const axios = require('axios')
 const { getEntertainmentGroups, baseGroupUrl, flat, doubleRGB } = require('../utils/helpers')
 const { eventHub } = require('../utils/eventHub')
-const state = require('../stores/globalState')
+const {getState, setState} = require('../stores/globalState')
 
 const hueUserName = process.env.HUE_CLIENT_KEY
 const hueClientKey = Buffer.from(process.env.HUE_CLIENT_SECRET, 'hex')
@@ -34,8 +34,8 @@ let i = 0
 const startStream = () => {
   i++
   console.log('StartStream has been called ', i)
-  console.log('connecting to group: ', state.currentGroup.id)
-  axios.put(`${baseGroupUrl}/${state.currentGroup.id}`, { stream: { active: true } })
+  console.log('connecting to group: ', getState('currentGroup.id'))
+  axios.put(`${baseGroupUrl}/${getState('currentGroup').id}`, { stream: { active: true } })
     .then(connectToSocket)
     .catch(restart)
 }
@@ -77,7 +77,7 @@ const formatSocketMessage = lights => {
 }
 
 const sendInitMessage = socket => {
-  const lights = state.currentGroup.lights.map(id => [0x00, 0x00, parseInt(id), ...doubleRGB(255, 0, 0)])
+  const lights = getState('currentGroup').lights.map(id => [0x00, 0x00, parseInt(id), ...doubleRGB(255, 0, 0)])
   socket.send(formatSocketMessage(lights))
 }
 
@@ -85,23 +85,24 @@ const connectToSocket = () => {
   const socket = getSocket()
   socket
     .on('connected', e => {
-      state.hasSocket = true
+      setState('hasSocket', true)
       console.log('connected')
       sendInitMessage(socket)     
       eventHub.on('emitLight', lights => {
+        console.log(lights)
         const message = formatSocketMessage(lights)
-        state.hasSocket && socket.send(message)
+        getState('hasSocket') && socket.send(message)
       })
     })
     .on('error', e => {
-      state.hasSocket = false
+      setState('hasSocket', false)
       console.log('ERROR', e)
       setTimeout(() => {
         restart()
       }, 40000)
     })
     .on('close', e => {
-      state.hasSocket = false
+      setState('hasSocket', false)
       eventHub.on('emitLight', () => console.log('nah bruv socket is not connect'))
       console.log('CLOSE', e)
     })

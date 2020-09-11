@@ -8,6 +8,7 @@ const { calculateXY } = require('../utils/rgbToXY')
 const { startStream, stopStream } = require('./socket')
 const { createGroup, getGroups, editGroup } = require('./groupHandler')
 const { get, baseHueUrl, setLight, shadeRGBColor, sleep, getRgbFromCssStr } = require('../utils/helpers')
+const {setState, getState} = require('../stores/globalState')
 
 router.get('/getConfig', async (req, res) => {
   const url = `${baseHueUrl()}/lights`
@@ -31,21 +32,22 @@ router.post('/createGroup', (req, res) => {
 
 router.post('/sync/start', async (req, res) => {
   const { syncId, existingGroups } = req.body
-  state.existingGroups.push(...existingGroups)
+  setState('existingGroups', existingGroups)
   const streamsToStop = existingGroups.filter(x => x.id != syncId).map(x => x.id)
   for (let i = 0; i < streamsToStop.length; i++) {
     await stopStream(streamsToStop[i])
   }
-
+  
   const groupToSync = existingGroups.find(x => x.id == syncId)
-  state.currentGroup = groupToSync
+  
+  setState('currentGroup', groupToSync)
   startStream(groupToSync)
   eventHub.emit('startPingInterval')
   res.send()
 })
 
 router.get('/sync/current/:id', async (req, res) => {
-  res.send(state.currentGroup.id)
+  res.send(getState('currentGroup').id)
 })
 
 
@@ -87,9 +89,5 @@ router.post('/setColors', (req, res) => {
   res.send({ ...state })
 })
 
-
-router.get('/testFunction', () => {
-  eventHub.emit('quickStart')
-})
 
 module.exports = router

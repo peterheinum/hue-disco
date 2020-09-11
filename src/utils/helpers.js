@@ -1,7 +1,7 @@
+const { prop, filter } = require('ramda')
 const axios = require('axios')
 const fetch = require('node-fetch')
 const _request = require('request')
-const { promisify } = require('util')
 
 const hueUserName = process.env.HUE_CLIENT_KEY
 
@@ -49,15 +49,13 @@ const setLight = async ({ id, hue = null, bri, sat = 254, xy = null, transitiont
 
 const getEntertainmentGroups = () => {
   const condition = ({ type }) => type == 'Entertainment'
-  const onlyEntertainment = arr => arr.filter(condition)
-  const getData = obj => obj['data']
 
   return new Promise((resolve, reject) => {
     axios
       .get(baseGroupUrl)
-      .then(getData)
+      .then(prop('data'))
       .then(objToArrayWithKeyAsId)
-      .then(onlyEntertainment)
+      .then(filter(condition))
       .then(resolve)
       .catch(reject)
   })
@@ -95,7 +93,6 @@ module.exports = {
   isEqual, 
   setLight,
   doubleRGB,
-  promisify,
   callStack,
   emptyArray,
   baseHueUrl,

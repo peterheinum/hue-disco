@@ -16,6 +16,7 @@ const {
   findHandler,
   unique,
 } = require('../../utils/helpers')
+const {setState, getState, assignState, setLight} = require('../../stores/globalState')
 
 /* UTILS */
 const getRgbAsString = ({ r, g, b }) => `rgb(${r},${g},${b})`
@@ -32,21 +33,23 @@ const isBusy = id => getLight(id).busy
 
 const removeAllBusy = () => lightLoop().forEach(id => setLight(id, { busy: false }))
 
-const setLight = (id, value) => {
-  !getLight(id)
-    ? set(state, `lights.${id}`, { ...value, capacity: 100 })
-    : Object.assign(getLight(id), { ...value, capacity: 100 })
+// const setLight = (id, value) => {
+//   !getLight(id)
+//     ? setState(`lights.${id}`, { ...value, capacity: 100 })
+//     : Object.assign(getLight(id), { ...value, capacity: 100 })
+// }
+
+const getLight = id => getState(`lights.${id}`)
+
+const getLights = () => getState(state, 'lights')
+
+const setMode = mode => setState('mode', mode)
+
+const lightLoop = () => {
+  return Object.keys(getState('lights'))
 }
 
-const getLight = id => get(state, `lights.${id}`)
-
-const getLights = () => get(state, 'lights')
-
-const setMode = mode => set(state, 'mode', mode)
-
-const lightLoop = () => Object.keys(get(state, 'lights'))
-
-const getColorsForTone = tone => get(state, `colorMap.${tone}`)
+const getColorsForTone = tone => getState(`colorMap.${tone}`)
 
 /* Color variables */
 const zeroRgb = { r: 0, g: 0, b: 0 }
@@ -74,12 +77,12 @@ const colorMap = {
 
 eventHub.on('setColors', colorMap => {
   console.log('new color map ', colorMap)
-  Object.assign(state.colorMap, colorMap)
+  setState('colorMap', colorMap)
 })
 
-if (state.currentGroup === null) {
-  state.currentGroup = {}
-  state.currentGroup.lights = ['1', '2', '3', '4', '5', '6']
+if (getState('currentGroup') === null) {
+  setState('currentGroup', {}) 
+  setState('currentGroup', { ...getState('currentGroup'), lights: ['1', '2', '3', '4', '5', '6'] }) 
 }
 
 const shuffle = arr => arr
@@ -93,26 +96,29 @@ const configurateVariables = () => {
     mode: 'slow-intro',
     colorMap: {}
   }
-  Object.assign(state, freshState)
 
-  get(state, 'currentGroup.lights').forEach(id => {
+  assignState(freshState)
+
+  getState('currentGroup').lights.forEach(id => {
     setLight(id, { id, ...zeroRgb, busy: false, tones: [], capacity: 100, floor: 70 })
   })
 
-  Object.assign(state.colorMap, colorMap)
+  setState('colorMap', colorMap)
 
   Object.keys(colorMap).forEach(tone => {
     const { id } = withLeastTones()
     assignTone(id, tone)
   })
+  console.log(getState('lights'))
 }
 
 const emitLights = () => {
   const colorMessage = lightLoop().map(id => {
-    const { r, g, b } = changeIntensity(getLight(id), state.currentIntensity)
+    const { r, g, b } = changeIntensity(getLight(id), getState('currentIntensity'))
+    console.log({ r, g, b })
     return [0x00, 0x00, parseInt(id), ...doubleRGB(r, g, b)]
   })
-
+  console.log(colorMessage)
   eventHub.emit('emitLight', colorMessage)
 }
 
@@ -150,12 +156,14 @@ const getTonesForLight = id => getLight(id).tones
 
 const getLightsForTone = tone => {
   let light = null
+  console.log('tone', tone)
   lightLoop().forEach(id => {
     const tones = getTonesForLight(id)
     if (tones.includes(tone)) {
       light = getLight(id)
     }
   })
+  console.log('tone returns', light)
   return light
 }
 
@@ -174,6 +182,7 @@ const dampenLights = () => {
 
   lightLoop().forEach(id => {
     const { r, g, b, busy, capacity, floor } = getLight(id)
+    console.log({r, g, b})
     capacity > floor && !busy && setLight(id, { ...changeIntensity({ r, g, b }, decreaseRate), capacity: capacity * decreaseRate })
   })
 }
@@ -181,10 +190,10 @@ const dampenLights = () => {
 
 const init = () => {
   configurateVariables()
-  state.dampenInterval = setInterval(() => {
-    state.hasSocket && emitLights()
+  setState('dampenInterval', setInterval(() => {
+    getState('hasSocket') && emitLights()
     dampenLights()
-  }, 50)
+  }, 50)) 
 }
 
 
@@ -205,20 +214,17 @@ const heartBeat = id => {
 
 
 eventHub.on('segment', ([segment, index]) => {
-  if (get(state, 'mode') !== 'flashes') {
+  if (getState('mode') !== 'flashes' || !getState('dampenInterval')) {
     return
   }
 
   const { pitches, duration, loudness_start, loudness_max, loudness_max_time } = segment
   if(loudness_max_time < 60 || duration < 80 || loudness_max > -5) return 
-  console.log({duration})
-  console.log({loudness_max})
-  console.log({loudness_max_time})
   const tone = convertPitchToNote(pitches)
   const [r, g, b] = getRgbFromCssStr(getColorsForTone(tone))
   const { id } = getLightsForTone(tone)
-
   setLight(id, { r, g, b, capacity: 100 })
+  console.log(getState('lights.' + id))
 })
 
 const getDefaultColorForLight = (id, index) => {
@@ -264,8 +270,7 @@ eventHub.on('section', ([section, index]) => {
   const { mode } = state
   const newMode = modes.filter(x => x != mode)[rand(modes.filter(x => x != mode).length)]
   console.log({newMode})
-  // set(state, 'mode', newMode)
-  set(state, 'mode', 'flashes')
+  setState('mode', 'flashes')
 })
 
 const raiseAll = () => lightLoop().map(getLight).forEach(light => {
@@ -279,7 +284,6 @@ const getThreeLights = () => {
   }
 
   /* remove this when group is changed */
-  return lightLoop()
   return unique(lights)
 }
 

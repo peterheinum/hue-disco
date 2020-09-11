@@ -16,9 +16,6 @@ express.use(require('express').static('public'))
 
 const { eventHub } = require('./utils/eventHub')
 
-
-
-
 const filterInt = str => parseInt(str).toString() != 'NaN'
 
 const sortMessage = message => {
@@ -43,5 +40,5 @@ io.on('connect', socket => {
   socket.on('message', emitToLights)
 })
 
-http.listen(3000, () => console.log('Webhook server is listening, port 3000'))
+http.listen(3000, () => console.log('Server is listening, port 3000'))
 
