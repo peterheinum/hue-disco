@@ -307,7 +307,6 @@ const configStateAndConnectToHue = (path) => {
   const { getGroups } = require('../services/groupHandler')
   const { startStream, getGroupsAndStopStreams } = require('../services/socket')
   const { setState } = require('../stores/globalState')
-  
   getGroups().then(groups => {
     setState('currentGroup', groups[1])
     getGroupsAndStopStreams()
@@ -316,12 +315,11 @@ const configStateAndConnectToHue = (path) => {
     .then(() => path && require(path))
   })
 }
-
 const main = (startCase) => ({
-  midi: () => configStateAndConnectToHue('../midi'),
+  midi: () => configStateAndConnectToHue('../midi/drumTrigger'),
   lights: () => configStateAndConnectToHue(),
   keyboard: () => configStateAndConnectToHue('./lightLab/keyboard'),
   spotify: () => getStoredSpotifyAuthAndStartPoll(),
   console: () => configStateAndConnectToHue('./lightLab/visualConsole'),
 }[startCase]())
-main('spotify')
+main('midi')
